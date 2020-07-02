@@ -77,11 +77,13 @@ TransitiveClosure::~TransitiveClosure(){
 struct SimpleBubbleSort {
 
     OPERATOR(Vertex& vertex) {
+//        printf("enter BubbleSort Operator\n");
         vid_t src = vertex.id();
 
         // if(vertex.id()<5)
         //     printf("%d %d\n", vertex.id(),vertex.degree());
 
+//        printf("vertex src id=%d, degree=%d\n",src,vertex.degree());
         degree_t size = vertex.degree();
         if(size<=1)
             return;
@@ -94,6 +96,7 @@ struct SimpleBubbleSort {
         // }
 // (250,0,1,5,252,252)
 
+//        printf("Before Sort loop\n");
         for (vid_t i = 0; i < (size-1); i++) {
             vid_t min_idx=i;
 
@@ -111,10 +114,11 @@ struct SimpleBubbleSort {
             vertex.neighbor_ptr()[min_idx] = temp;
         }
         //  if(src==250){
-        //     for (vid_t i = 0; i < (size); i++) {
-        //         printf("%d ", vertex.neighbor_ptr()[i]);
-        //     }
-        //     printf("\n");
+//        printf("After Sort loop\n");
+             for (vid_t i = 0; i < (size); i++) {
+//                 printf("vertex.neighbor_ptr()[%d]=%d\n", i,vertex.neighbor_ptr()[i]);
+             }
+//            printf("\n");
         // }
 
     }
@@ -128,131 +132,142 @@ struct OPERATOR_AdjIntersectionCountBalanced {
     vid_t* d_src ;
     vid_t* d_dest;
 
-    OPERATOR(Vertex &u, Vertex& v, vid_t* ui_begin, vid_t* ui_end, vid_t* vi_begin, vid_t* vi_end, int FLAG) {
+//    OPERATOR(Vertex &u, Vertex& v, vid_t* ui_begin, vid_t* ui_end, vid_t* vi_begin, vid_t* vi_end, int FLAG) {
+    OPERATOR(Vertex &u_, Vertex& v_, vid_t* ui_begin_, vid_t* ui_end_, vid_t* vi_begin_, vid_t* vi_end_, int FLAG){
         int count = 0;
-
-        if(u.id()==v.id()){
-            // printf("@");
-            return;
-        }
-
-        bool vSrc=false;
-        // vid_t src = u.id();
-        // vid_t dest = v.id();
+	int i=0;
+//	char uistr[400];
+//	char vistr[400];
+//	char outstr[1000];
+//	string outstr;
+	if ((FLAG& 1)==1) return;
+	vid_t u_id=u_.id();
+	vid_t v_id=v_.id();
+	auto u_degree=u_.degree();
+	auto v_degree=v_.degree();
+	vid_t* ui_begin=ui_begin_;
+	vid_t* ui_end=ui_end_;
+	vid_t* vi_begin=vi_begin_;
+	vid_t* vi_end=vi_end_;
+//	if (FLAG!=2) {
+//        	printf("u.id=%d,u.degree=%d, *ui_begin=%d,*ui_end=%d\n v.id=%d,v.degree=%d, *vi_begin=%d,*vi_end=%d\n", u_.id(),u_.degree(),*ui_begin_,*ui_end_, v_.id(),v_.degree(),*vi_begin_,*vi_end_);
+//	} else
+//	{
+//        	printf("u.id=%d,u.degree=%d, *ui_begin=%d,*ui_end=%d\n v.id=%d,v.degree=%d, *vi_begin=%d,*vi_end=%d\n", v_.id(),v_.degree(),*vi_begin_,*vi_end_, u_.id(),u_.degree(),*ui_begin_,*ui_end_);
+//	}
         if(FLAG&2){
-            vSrc=true;
-            // src = v.id();
-            // dest = u.id();
-            // printf("^");
-        }
+//		printf("exchange u and v\n");
+		u_id=v_.id();
+		v_id=u_.id();
+		u_degree=v_.degree();
+		v_degree=u_.degree();
+		ui_begin=vi_begin_;
+		ui_end=vi_end_;
+		vi_begin=ui_begin_;
+		vi_end=ui_end_;
+	}
+       	printf("u.id=%d,u.degree=%d\n", u_id,u_degree );
+	i=0;
+	while (i<u_degree){
+	        printf("*ui_begin[%d-%d]=%ld\n",u_degree,i,*(ui_begin+i));
+		if (*(ui_begin+i) >200){
+//		if (*(ui_begin+i) ==2147483647){
+        		printf("Wrong node id, u.id=%d,u.degree=%d, *ui_begin=%d,*ui_end=%d,i=%d\n ", u_.id(),u_.degree(),*ui_begin_,*ui_end_,i);
+		}
+		i++;
+	}
+       	printf("v.id=%d,v.degree=%d\n", v_id,v_degree );
+	i=0;
+	while (i<v_degree){
+	        printf("*vi_begin[%d-%d]=%ld\n",v_degree,i,*(vi_begin+i));
+		if (*(vi_begin+i) >200){
+        		printf("Wrong node id, v.id=%d,v.degree=%d, *vi_begin=%d,*vi_end=%d,i=%d\n ", v_.id(),v_.degree(),*vi_begin_,*vi_end_,i);
+		}
+		i++;
+	}
+/*
+	if (u_degree==1) {
+        	printf("u.id=%d,u.degree=%d, *ui_begin[0-0]=%d\n", u_id,u_degree,*ui_begin );
+	} else
+	if (u_degree==2) {
+        	printf("u.id=%d,u.degree=%d, *ui_begin[2-0]=%d,*ui_begin[2-1]=%d\n", u_id,u_degree,*ui_begin,*ui_end) ;
+	} else
+	if (u_degree==3) {
+        	printf("u.id=%d,u.degree=%d, *ui_begin[3-0]=%d,*ui_begin[3-1]=%d,ui_begin[3-2]=%d\n ", u_id,u_degree,*ui_begin,*(ui_begin+1),*ui_end);
+	} 
 
 
-        if (!FLAG) {
-            int comp_equals, comp1, comp2, ui_bound, vi_bound;
-            //printf("Intersecting %d, %d: %d -> %d, %d -> %d\n", u.id(), v.id(), *ui_begin, *ui_end, *vi_begin, *vi_end);
-            while (vi_begin <= vi_end && ui_begin <= ui_end) {
-                comp_equals = (*ui_begin == *vi_begin);
-                if(!comp_equals){
+	if (v_degree==1) {
+        	printf("v.id=%d,v.degree=%d, *vi_begin[0-0]=%d\n", v_id,v_degree,*vi_begin );
+	} else
+	if (v_degree==2) {
+        	printf("v.id=%d,v.degree=%d, *vi_begin[2-0]=%d,*vi_begin[2-1]=%d\n", v_id,v_degree,*vi_begin,*vi_end) ;
+	} else
+	if (v_degree==3) {
+        	printf("v.id=%d,v.degree=%d, *vi_begin[3-0]=%d,*vi_begin[3-1]=%d,vi_begin[3-2]=%d\n ", v_id,v_degree,*vi_begin,*(vi_begin+1),*vi_end);
+	} 
 
-                    if(!vSrc && *ui_begin > *vi_begin && *vi_begin != u.id() && *vi_begin != v.id()){
-                        if(countOnly){
-                            count++;
-                        }else{
-                            trans_t pos = atomicAdd(d_CountNewEdges, 1);
-                            d_src[pos]  = u.id();
-                            d_dest[pos] = *vi_begin;
-                        }
-                    }else if(vSrc && *ui_begin < *vi_begin && *ui_begin !=v.id() && *ui_begin != u.id()){
-                        if(countOnly){
-                            count++;
-                        }else{
-                            trans_t pos = atomicAdd(d_CountNewEdges, 1);
-                            d_src[pos]  = v.id();
-                            d_dest[pos] = *ui_begin;
-                        }
-                    }
-                    
-                }
 
-                // count += comp_equals;
-                comp1 = (*ui_begin >= *vi_begin);
-                comp2 = (*ui_begin <= *vi_begin);
-                ui_bound = (ui_begin == ui_end);
-                vi_bound = (vi_begin == vi_end);
-                // early termination
-                if ((ui_bound && comp2) || (vi_bound && comp1))
-                    break;
-                if ((comp1 && !vi_bound) || ui_bound)
-                    vi_begin += 1;
-                if ((comp2 && !ui_bound) || vi_bound)
-                    ui_begin += 1;
-            }
-            while(!vSrc && vi_begin <= vi_end){
-                if(*vi_begin != u.id()){
+*/
+
+
+
+//	printf("u.id=%d,u.degree=%d, ui_begin=%ld, ui_end=%ld, *ui_begin=%d,*ui_end=%d\n v.id=%d,v.degree=%d, vi_begin=%ld, vi_end=%ld,*vi_begin=%d,*vi_end=%d\n", u_id,u_.degree(),ui_begin_,ui_end_,*ui_begin_,*ui_end_, v_id,v_.degree(),vi_begin_,vi_end_,*vi_begin_,*vi_end_);
+//	while ( ui_begin+i<=ui_end) {
+//	   printf("ui_begin[%d]=%d, ",i,*(ui_begin+i));
+//	   i++;
+//	}
+//	printf("\n");
+	i=0;
+//	while ( vi_begin+i<=vi_end) {
+//	   printf("vi_begin[%d]=%d, ",i,*(vi_begin+i));
+//	   i++;
+//	}
+//	printf("\n");
+//        vid_t tmpn;
+//	printf("O_AdjIntersectionCountBalanced:u.id=%d,v.id=%d,u.degree=%d,v.degree=%d,*ui_begin=%d,*ui_end=%d,*vi_begin=%d,*vi_end=%d\n",u.id(),v.id(),u.degree(),v.degree(),*ui_begin,*ui_end,*vi_begin,*vi_end);
+//	printf("u.id=%d,u.degree=%d, ui_begin=%ld, ui_end=%ld, *ui_begin=%d,*ui_end=%d\n",u_id,u_.degree(),ui_begin_,ui_end_,*ui_begin_,*ui_end_);
+
+
+//	printf("v.id=%d,v.degree=%d, vi_begin=%ld, vi_end=%ld,*vi_begin=%d,*vi_end=%d\n",v_id,v_.degree(),vi_begin_,vi_end_,*vi_begin_,*vi_end_);
+//	printf("v.id=%d,v.degree=%d, vi_begin=%ld, vi_end=%ld,*vi_begin=%d,*vi_end=%d\n",v_id,v_.degree(),vi_begin_,vi_end_,*vi_begin_,*vi_end_);
+//	printf("O_AdjIntersectionCountBalanced:*ui_begin=%d,*ui_end=%d,*vi_begin=%d,*vi_end=%d\n",*ui_begin,*ui_end,*vi_begin,*vi_end);
+//	printf("FLAG=%d\n",FLAG);
+//        degree_t usize = u.degree();
+//        degree_t vsize = v.degree();
+
+//        for (vid_t i = 0; i < (usize); i++) {
+//                 printf("u.id()=%d,u.neighbour_ptr()[%d]=%d,u.degree()=%d\n", u.id(),i,u.neighbor_ptr()[i],usize );
+//             }
+
+//        for (vid_t i = 0; i < (vsize); i++) {
+//		tmpn=v.neighbor_ptr()[i];
+//                 printf("v.id()=%d,v.neighbour_ptr()[%d]=%d,v.degree()=%d\n", v.id(),i,v.neighbor_ptr()[i],vsize );
+//             }
+
+
+        while( vi_begin <= vi_end){
+	     while (((*vi_begin) >(*ui_begin)) && (ui_begin<ui_end)) {
+		      ui_begin+=1;
+	     }
+             if ((*vi_begin)==(*ui_begin)) {
+			vi_begin+=1;
+			continue;
+	     }
+
+                if(*vi_begin != u_id){
                     if(countOnly){
                         count++;
                     }else{
                         trans_t pos = atomicAdd(d_CountNewEdges, 1);
-                        d_src[pos]  = u.id();
+                        d_src[pos]  = u_id;
                         d_dest[pos] = *vi_begin;
                     }
+            	    printf("u->v->vi Find Insert edge %d->%d->%d,countonly=%d\n", u_id,v_id, *vi_begin,countOnly);
                 }
                 vi_begin +=1;
-            }
-            while(vSrc && ui_begin <= ui_end){
-                if(*ui_begin != v.id()){
-                    if(countOnly){
-                        count++;
-                    }else{
-                        trans_t pos = atomicAdd(d_CountNewEdges, 1);
-                        d_src[pos]  = v.id();
-                        d_dest[pos] = *ui_begin;
-                    }
-                }
-                ui_begin +=1;
-            }
-
-
-        } else {
-            // if((ui_end!=ui_begin) && (vi_end!=vi_begin)){
-            //     printf("This shouldn't happen %d %d\n", ui_end-ui_begin,vi_end-vi_begin);
-            // }
-            return;
-            // vid_t vi_low, vi_high, vi_mid;
-            // while (ui_begin <= ui_end) {
-            //     auto search_val = *ui_begin;
-            //     vi_low = 0;
-            //     vi_high = vi_end-vi_begin;
-            //     bool earlyBreak=false;
-            //     while (vi_low <= vi_high) {
-            //         vi_mid = (vi_low+vi_high)/2;
-            //         auto comp = (*(vi_begin+vi_mid) - search_val);
-            //         if (!comp) {
-            //             // count += 1;
-            //             earlyBreak=true;
-            //             break;
-            //         }
-            //         if (comp > 0) {
-            //             vi_high = vi_mid-1;
-            //         } else if (comp < 0) {
-            //             vi_low = vi_mid+1;
-            //         }
-            //     }
-            //     if(earlyBreak==false){
-            //         // printf("$$$\n");
-            //         if(countOnly){
-            //             count++; // If the value has been found. We don't want to add an edge
-            //         }else{
-            //             trans_t pos = atomicAdd(d_CountNewEdges, 2);
-            //             d_src[pos]  = u.id();
-            //             d_dest[pos] = search_val;
-            //             d_src[pos+1]  = v.id();
-            //             d_dest[pos+1] = search_val;
-            //         }
-            //     }
-            //     ui_begin += 1;
-            // }
         }
+
         if(count>0){
             if(countOnly){
                 atomicAdd(d_CountNewEdges, count);
@@ -337,12 +352,16 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
     int iterations=0;
     while(true){
 
+//        printf("TransitiveClosure::run \n");
         cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
+//        printf("before for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
         forAllAdjUnions(hornet, OPERATOR_AdjIntersectionCountBalanced<true> { d_CountNewEdges, d_src, d_dest }, WORK_FACTOR);
 
+//        printf("after for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
         trans_t h_batchSize;
         cudaMemcpy(&h_batchSize,d_CountNewEdges, sizeof(trans_t),cudaMemcpyDeviceToHost);
 
+//        printf("after counting, h_batchSize=%lld\n",h_batchSize);
         if(h_batchSize==0){
             break;
         }
@@ -362,8 +381,9 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
         // gpu::allocate(d_src, h_batchSize);
         // gpu::allocate(d_dest, h_batchSize);
 
-
+        //printf("Again before for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
         forAllAdjUnions(hornet, OPERATOR_AdjIntersectionCountBalanced<false> { d_CountNewEdges, d_src, d_dest }, WORK_FACTOR);
+        //printf("Again after for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
         cudaDeviceSynchronize();
         trans_t unFilterBatchSize = h_batchSize;
         vid_t* temp;
@@ -443,6 +463,7 @@ void TransitiveClosure::cleanGraph(){
         cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
 
 
+        printf("enter clean graph, before for all vertices\n");
         forAllVertices(hornet, findDuplicatesForRemoval<true>{d_CountNewEdges, d_src, d_dest});
 
         trans_t h_batchSize;
@@ -485,9 +506,15 @@ void TransitiveClosure::init(){
 }
 
 
-void TransitiveClosure::sortHornet(){
-    forAllVertices(hornet, SimpleBubbleSort {});
-}
+//void TransitiveClosure::sortHornet(){
+//    forAllVertices(hornet, SimpleBubbleSort {});
+//}
+
+ void TransitiveClosure::sortHornet(){
+    // forAllVertices(hornet, SimpleBubbleSort {});
+    hornet.sort();
+ } 
+
 
 
 } // namespace hornets_nest

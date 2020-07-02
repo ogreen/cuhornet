@@ -398,6 +398,7 @@ void forAllAdjUnions(HornetClass&          hornet,
     unsigned long long *queue_pos = (unsigned long long *)calloc(MAX_ADJ_UNIONS_BINS+1, sizeof(unsigned long long));
 
     // figure out cutoffs/counts per bin
+//    printf("forAllUnions vertex_pairs.size()=%d\n",vertex_pairs.size());
     if (vertex_pairs.size())
         forAllVertexPairs(hornet, vertex_pairs, BinEdges {hd_queue_info, true, WORK_FACTOR});
     else

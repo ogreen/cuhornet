@@ -29,11 +29,17 @@ int exec(int argc, char* argv[]) {
     }
     printf("\n");
 
+    printf("before Hornet init \n");
     HornetInit hornet_init(graph.nV(), graph.nE(), graph.csr_out_offsets(),
                            graph.csr_out_edges());
+    printf("after Hornet init \n");
+    printf("before hornet graph\n");
     HornetGraph hornet_graph(hornet_init);
+    printf("after hornet graph\n");
 
+    printf("before transClos \n");
     TransitiveClosure transClos(hornet_graph);
+    printf("after transClos \n");
 
     transClos.cleanGraph();
 
