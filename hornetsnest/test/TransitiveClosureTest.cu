@@ -23,9 +23,10 @@ int exec(int argc, char* argv[]) {
 
     printf("Very start %d %d\n",graph.nV(), graph.nE());
 
-    int size = graph.csr_out_offsets()[251]-graph.csr_out_offsets()[250];
+    // int size = graph.csr_out_offsets()[251]-graph.csr_out_offsets()[250];
+    int size = graph.nV();
     for(int s=0; s<size; s++){
-        printf("%d ", graph.csr_out_edges()[graph.csr_out_offsets()[250]+s]);
+        printf("%d ", graph.csr_out_offsets()[s+1] - graph.csr_out_offsets()[s]);
     }
     printf("\n");
 
@@ -63,4 +64,3 @@ int main(int argc, char* argv[]) {
 
     return ret;
 }
-
