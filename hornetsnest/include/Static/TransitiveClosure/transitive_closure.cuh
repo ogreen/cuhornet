@@ -168,22 +168,23 @@ struct OPERATOR_AdjIntersectionCountBalanced {
 		vi_begin=ui_begin_;
 		vi_end=ui_end_;
 	}
-       	printf("Thread ID=%d,u.id=%d,u.degree=%d\n",id, u_id,u_degree );
+//       	printf("Thread ID=%d,u.id=%d,u.degree=%d\n",id, u_id,u_degree );
 	i=0;
-	while (i<u_degree){
-	        printf("Thread ID=%d,*ui_begin[%d-%d]=%d\n",id,u_degree,i,*(ui_begin+i));
-		if (*(ui_begin+i) >200){
+//	while (i<u_degree){
+	while (ui_begin+i<=ui_end){
+//	        printf("Thread ID=%d,*ui_begin[%d-%d]=%d\n",id,u_degree,i,*(ui_begin+i));
+		if (*(ui_begin+i) >2000000000){
 //		if (*(ui_begin+i) ==2147483647){
         		printf("Thread ID=%d,Wrong node id, u.id=%d,u.degree=%d, *ui_begin=%d,*ui_end=%d,(vid_t)*(ui_begin+%d)=%d\n ",id, u_.id(),u_.degree(),*ui_begin_,*ui_end_,i,(vid_t)*(ui_begin+i));
 		}
 		i++;
 	}
-       	printf("Thread ID=%d,v.id=%d,v.degree=%d\n",id, v_id,v_degree );
+//       	printf("Thread ID=%d,v.id=%d,v.degree=%d\n",id, v_id,v_degree );
 	i=0;
-	while (i<v_degree){
-	        printf("Thread ID=%d,*vi_begin[%d-%d]=%d\n",id,v_degree,i,*(vi_begin+i));
-		if (*(vi_begin+i) >200){
-        		printf("Thread ID=%d,Wrong node id, v.id=%d,v.degree=%d, *vi_begin=%d,*vi_end=%d,(vid_t)*(vi_begin+%d)=%d\n ",id, v_.id(),v_.degree(),*vi_begin_,*vi_end_,i,(vid_t)*(vi_begin+i));
+	while (vi_begin+i<=vi_end){
+//	        printf("Thread ID=%d,*vi_begin[%d-%d]=%d\n",id,v_degree,i,*(vi_begin+i));
+		if (*(vi_begin+i) >200000000000){
+//        		printf("Thread ID=%d,Wrong node id, v.id=%d,v.degree=%d, *vi_begin=%d,*vi_end=%d,(vid_t)*(vi_begin+%d)=%d\n ",id, v_.id(),v_.degree(),*vi_begin_,*vi_end_,i,(vid_t)*(vi_begin+i));
 		}
 		i++;
 	}
@@ -260,12 +261,12 @@ struct OPERATOR_AdjIntersectionCountBalanced {
                 if((vid_t)(*vi_begin) != (vid_t)u_id){
                     if(countOnly){
                         count++;
-            	    	printf("Thread ID=%d,u->v->vi Find Insert edge %d->%d->%d,countonly=%d\n", id,u_id,v_id, *vi_begin,countOnly);
+//            	    	printf("Thread ID=%d,u->v->vi Find Insert edge %d->%d->%d,countonly=%d\n", id,u_id,v_id, *vi_begin,countOnly);
                     }else{
                         trans_t pos = atomicAdd(d_CountNewEdges, 1);
                         d_src[pos]  = u_id;
                         d_dest[pos] = *vi_begin;
-            	    	printf("Thread ID=%d,u->v->vi Find Insert edge %d->%d->%d,pos=%lld,countonly=%d\n", id,u_id,v_id, *vi_begin,pos,countOnly);
+//            	    	printf("Thread ID=%d,u->v->vi Find Insert edge %d->%d->%d,pos=%lld,countonly=%d\n", id,u_id,v_id, *vi_begin,pos,countOnly);
                     }
 //            	    printf("u->v->vi Find Insert edge %d->%d->%d,pos=%lld,countonly=%d\n", u_id,v_id, *vi_begin,pos,countOnly);
                 }

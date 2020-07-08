@@ -188,13 +188,19 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
             vi_end = v_len - 1;
             ui_end = u_len - 1;
         } else if (diag_id < total_work) {
-            vi_end = pathPoints[(block_local_id+1)*2];
-            ui_end = pathPoints[(block_local_id+1)*2+1];
+            vi_end = v_len - 1;
+            ui_end = u_len - 1;
+//modified July 5,2020
+//            vi_end = pathPoints[(block_local_id+1)*2];
+//            ui_end = pathPoints[(block_local_id+1)*2+1];
         }
         int flag2=flag;
         if (!sourceSmaller)
             flag2=flag+2;
         if (diag_id < total_work) {
+            vi_begin = 0;
+            ui_begin = 0;
+//modified July 7,2020
             op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag2);
         }
     }
@@ -240,8 +246,12 @@ __global__ void forAllEdgesAdjUnionImbalancedKernel(HornetDevice hornet, T* __re
         auto work_per_thread = u_len / threads_per_union;
         auto remainder_work = u_len % threads_per_union;
         // divide up work evenly among neighbors of u
-        ui_begin = thread_union_id*work_per_thread + std::min(thread_union_id, remainder_work);
-        ui_end = (thread_union_id+1)*work_per_thread + std::min(thread_union_id+1, remainder_work) - 1;
+//        ui_begin = thread_union_id*work_per_thread + std::min(thread_union_id, remainder_work);
+        ui_begin = 0;
+// modified July 6, 2020
+        ui_end = u_len-1;
+//        ui_end = (thread_union_id+1)*work_per_thread + std::min(thread_union_id+1, remainder_work) - 1;
+// modified July 6, 2020
         if (ui_end < u_len) {
             op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag);
         }
