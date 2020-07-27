@@ -55,6 +55,7 @@ add_executable(triangle2    test/TriangleTest2.cu)
 add_executable(clus-coeff   test/ClusCoeffTest.cu)
 add_executable(pr           test/PageRankTest.cu)
 add_executable(trans        test/TransitiveClosureTest.cu)
+add_executable(tc           test/STC.cu)
 
 
 target_link_libraries(dummy         hornetAlg)
@@ -73,4 +74,5 @@ target_link_libraries(triangle2     hornetAlg)
 target_link_libraries(clus-coeff    hornetAlg)
 target_link_libraries(pr            hornetAlg)
 target_link_libraries(trans         hornetAlg)
+target_link_libraries(tc            hornetAlg)
 

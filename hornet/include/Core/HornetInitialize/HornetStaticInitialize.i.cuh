@@ -73,6 +73,7 @@ template <typename... VertexMetaTypes, typename... EdgeMetaTypes,
 degree_t
 HORNETSTATIC::
 nV(void) const noexcept {
+//why const? can we change nV when update the graph?
     return _nV;
 }
 

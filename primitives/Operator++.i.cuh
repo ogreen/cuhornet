@@ -201,6 +201,52 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
             vi_begin = 0;
             ui_begin = 0;
 //modified July 7,2020
+            vi_end = v_len - 1;
+            ui_end = u_len - 1;
+//modified July 13,2020
+            op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag2);
+        }
+    }
+}
+
+//Modified July 23, 2020
+template<typename HornetDevice, typename T, typename Operator>
+__global__ void forAllEdgesAdjUnionBalancedKernel_TC(HornetDevice hornet, T* __restrict__ array, unsigned long long start, unsigned long long end, unsigned long long threads_per_union, int flag, Operator op) {
+
+    using namespace adj_union;
+    using vid_t = typename HornetDevice::VertexType;
+    int       id = blockIdx.x * blockDim.x + threadIdx.x;
+    int queue_id = id / threads_per_union;
+    int thread_union_id = threadIdx.x % threads_per_union;
+    int block_local_id = threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    int queue_stride = stride / threads_per_union;
+
+    // TODO: dynamic vs. static shared memory allocation?
+    for (auto i = start+queue_id; i < end; i += queue_stride) {
+        auto src_vtx = hornet.vertex(array[2*i]);
+        auto dst_vtx = hornet.vertex(array[2*i+1]);
+        int srcLen = src_vtx.degree();
+        int destLen = dst_vtx.degree();
+        int total_work = destLen;
+        vid_t src = src_vtx.id();
+        vid_t dest = dst_vtx.id();
+
+        vid_t u = src;
+        vid_t v = dest;
+        auto u_vtx = src_vtx;
+        auto v_vtx = dst_vtx;
+        degree_t u_len = srcLen;
+        degree_t v_len = destLen;
+        vid_t* u_nodes = hornet.vertex(u).neighbor_ptr();
+        vid_t* v_nodes = hornet.vertex(v).neighbor_ptr();
+
+        vid_t vi_begin, ui_begin, vi_end, ui_end;
+            ui_begin = 0;
+            ui_end = u_len - 1;
+            vi_begin = id;
+            vi_end = id;
+	    if (id<=v_len-1)
             op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag2);
         }
     }
@@ -257,6 +303,60 @@ __global__ void forAllEdgesAdjUnionImbalancedKernel(HornetDevice hornet, T* __re
         }
     }
 }
+
+//Modified July 26,2020
+
+template<typename HornetDevice, typename T, typename Operator>
+__global__ void forAllEdgesAdjUnionImbalancedKernel_TC(HornetDevice hornet, T* __restrict__ array, unsigned long long start, unsigned long long end, unsigned long long threads_per_union, int flag, Operator op) {
+
+    using namespace adj_union;
+    using vid_t = typename HornetDevice::VertexType;
+    auto       id = blockIdx.x * blockDim.x + threadIdx.x;
+    auto queue_id = id / threads_per_union;
+    auto block_union_offset = blockIdx.x % ((threads_per_union+blockDim.x-1) / blockDim.x); // > 1 if threads_per_union > block size
+    auto thread_union_id = ((block_union_offset*blockDim.x)+threadIdx.x) % threads_per_union;
+    auto stride = blockDim.x * gridDim.x;
+    auto queue_stride = stride / threads_per_union;
+    for (auto i = start+queue_id; i < end; i += queue_stride) {
+        auto src_vtx = hornet.vertex(array[2*i]);
+        auto dst_vtx = hornet.vertex(array[2*i+1]);
+        int srcLen = src_vtx.degree();
+        int destLen = dst_vtx.degree();
+        vid_t src = src_vtx.id();
+        vid_t dest = dst_vtx.id();
+
+        bool avoidCalc = (src == dest) || (srcLen < 2);
+        if (avoidCalc)
+            continue;
+
+        // determine u,v where |adj(u)| <= |adj(v)|
+        vid_t u = src;
+        vid_t v = dest;
+        auto u_vtx = src_vtx;
+        auto v_vtx = dst_vtx;
+        degree_t u_len = srcLen;
+        degree_t v_len = destLen;
+        vid_t* u_nodes = hornet.vertex(u).neighbor_ptr();
+        vid_t* v_nodes = hornet.vertex(v).neighbor_ptr();
+
+        int ui_begin, vi_begin, ui_end, vi_end;
+        auto work_per_thread = u_len / threads_per_union;
+        auto remainder_work = u_len % threads_per_union;
+        // divide up work evenly among neighbors of u
+//        ui_begin = thread_union_id*work_per_thread + std::min(thread_union_id, remainder_work);
+        ui_begin = 0;
+        ui_end = u_len-1;
+// modified July 6, 2020
+//        ui_end = (thread_union_id+1)*work_per_thread + std::min(thread_union_id+1, remainder_work) - 1;
+// modified July 6, 2020
+        vi_begin = id;
+        vi_end = id;
+        if (vi_end < v_len-1) {
+            op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag);
+        }
+    }
+}
+
 
 template<typename Operator, typename vid_t>
 __global__ void forAllnumVKernel(vid_t d_nV, Operator op) {
@@ -367,6 +467,9 @@ namespace adj_unions {
                 bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_u*BINS_1D_DIM+log_v); 
             }
             // bin_index = (MAX_ADJ_UNIONS_BINS/2)+(log_v*BINS_1D_DIM+log_u); 
+//            bin_index = (log_v*BINS_1D_DIM+log_u);
+            bin_index = (log_u*BINS_1D_DIM+log_v);
+//Modified July 27, 2020
             // bin_index = (log_v*BINS_1D_DIM+log_u);
 
             // Either count or add the item to the appropriate queue position
@@ -380,6 +483,44 @@ namespace adj_unions {
         }
     };
 }
+///**
+//Modify July 26, 2020
+//    template <typename vid_t>
+//    struct bin_edges_TC {
+//        HostDeviceVar<queue_info<vid_t>> d_queue_info;
+//        bool countOnly;
+//        const int WORK_FACTOR;
+//        int total_work, bin_index;
+
+//        OPERATOR(Vertex& src, Vertex& dst) {
+//            // Choose the bin to place this edge into
+//            degree_t src_len = src.degree();
+//            degree_t dst_len = dst.degree();
+//            degree_t u_len = src_len ;
+//            degree_t v_len = dst_len ;
+//            unsigned int log_u = std::min(32-__clz(u_len), 31);
+//            unsigned int log_v = std::min(32-__clz(v_len), 31);
+//            int comparison_work_est = u_len+v_len;
+//            int antisect_work_est = v_len;
+//            int METHOD = ((WORK_FACTOR*antisect_work_est >= comparison_work_est/2)); 
+//            if (!METHOD && u_len <= 1) {
+//                bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2);
+//            } else if (!METHOD) {
+//                bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_v*BINS_1D_DIM+log_u);
+//            } else {
+//                bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_u*BINS_1D_DIM+log_v); 
+//            }
+//            // Either count or add the item to the appropriate queue position
+//            if (countOnly)
+//                atomicAdd(&(d_queue_info.ptr()->d_queue_sizes[bin_index]), 1ULL);
+//            else {
+//                unsigned long long id = atomicAdd(&(d_queue_info.ptr()->d_queue_pos[bin_index]), 1ULL);
+//                d_queue_info.ptr()->d_edge_queue[id*2] = src.id();
+//                d_queue_info.ptr()->d_edge_queue[id*2+1] = dst.id();
+//            }
+//        }
+//    };
+//**/
 
 
 template<typename HornetClass, typename Operator>
@@ -388,6 +529,14 @@ void forAllAdjUnions(HornetClass&         hornet,
                      const int WORK_FACTOR)
 {
     forAllAdjUnions(hornet, TwoLevelQueue<vid2_t>(hornet, 0), op, WORK_FACTOR); // TODO: why can't just pass in 0?
+}
+//Modified July 23, 2020
+template<typename HornetClass, typename Operator>
+void forAllAdjUnion_TC(HornetClass&         hornet,
+                     const Operator&      op,
+                     const int WORK_FACTOR)
+{
+    forAllAdjUnion_TC(hornet, TwoLevelQueue<vid2_t>(hornet, 0), op, WORK_FACTOR); // TODO: why can't just pass in 0?
 }
 
 template<typename HornetClass, typename Operator>
@@ -491,6 +640,119 @@ void forAllAdjUnions(HornetClass&          hornet,
     free(queue_pos);
 }
 
+//Modified July 23, 2020
+template<typename HornetClass, typename Operator>
+void forAllAdjUnion_TC(HornetClass&          hornet,
+                     TwoLevelQueue<vid2_t> vertex_pairs,
+                     const Operator&       op,
+                     const int WORK_FACTOR)
+{
+    using namespace adj_unions;
+    using BinEdges = bin_edges<typename HornetClass::VertexType>;
+//    using BinEdges_TC = bin_edges_TC<typename HornetClass::VertexType>;
+    HostDeviceVar<queue_info<typename HornetClass::VertexType>> hd_queue_info;
+    load_balancing::VertexBased1 load_balancing ( hornet );
+
+    // memory allocations host and device side
+    hornets_nest::gpu::allocate(hd_queue_info().d_edge_queue, 2*hornet.nE());
+    hornets_nest::gpu::allocate(hd_queue_info().d_queue_sizes, MAX_ADJ_UNIONS_BINS);
+    hornets_nest::gpu::memsetZero(hd_queue_info().d_queue_sizes, MAX_ADJ_UNIONS_BINS);
+    unsigned long long *queue_sizes = (unsigned long long *)calloc(MAX_ADJ_UNIONS_BINS, sizeof(unsigned long long));
+    hornets_nest::gpu::allocate(hd_queue_info().d_queue_pos, MAX_ADJ_UNIONS_BINS+1);
+    hornets_nest::gpu::memsetZero(hd_queue_info().d_queue_pos, MAX_ADJ_UNIONS_BINS+1);
+    unsigned long long *queue_pos = (unsigned long long *)calloc(MAX_ADJ_UNIONS_BINS+1, sizeof(unsigned long long));
+
+    // figure out cutoffs/counts per bin
+//    printf("forAllUnions vertex_pairs.size()=%d\n",vertex_pairs.size());
+    if (vertex_pairs.size())
+        forAllVertexPairs(hornet, vertex_pairs, BinEdges {hd_queue_info, true, WORK_FACTOR});
+    else
+        forAllEdgeVertexPairs(hornet, BinEdges {hd_queue_info, true, WORK_FACTOR}, load_balancing);
+
+    // copy queue size info to from device to host
+    hornets_nest::gpu::copyToHost(hd_queue_info().d_queue_sizes, MAX_ADJ_UNIONS_BINS, queue_sizes);
+    // prefix sum over bin sizes
+    std::partial_sum(queue_sizes, queue_sizes+MAX_ADJ_UNIONS_BINS, queue_pos+1);
+    // transfer prefx results to device
+    hornets_nest::host::copyToDevice(queue_pos, MAX_ADJ_UNIONS_BINS+1, hd_queue_info().d_queue_pos);
+    // bin edges
+    if (vertex_pairs.size())
+        forAllVertexPairs(hornet, vertex_pairs, BinEdges {hd_queue_info, false, WORK_FACTOR});
+    else
+        forAllEdgeVertexPairs(hornet, BinEdges {hd_queue_info, false, WORK_FACTOR}, load_balancing);
+
+    const int BALANCED_THREADS_LOGMAX = 31-__builtin_clz(BLOCK_SIZE_OP2)+1; // assumes BLOCK_SIZE is int type
+    int bin_index;
+    int bin_offset = 0;
+    unsigned long long start_index = 0; 
+    unsigned long long end_index; 
+    unsigned int threads_per;
+    unsigned long long size;
+    int threads_log = 1;
+    // balanced kernel
+    while ((threads_log < BALANCED_THREADS_LOGMAX) && (threads_log+LOG_OFFSET_BALANCED < BINS_1D_DIM)) 
+    {
+        bin_index = bin_offset+(threads_log+LOG_OFFSET_BALANCED)*BINS_1D_DIM;
+        end_index = queue_pos[bin_index];
+        size = end_index - start_index;
+        if (size) {
+//            threads_per = 1; 
+            threads_per = 1 << (threads_log-1); 
+// modified July 11, 2020
+            forAllEdgesAdjUnionBalanced_TC(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 0);
+        }
+        start_index = end_index;
+        threads_log += 1;
+    }
+
+    // process remaining "tail" bins
+    bin_index = MAX_ADJ_UNIONS_BINS/2;
+    end_index = queue_pos[bin_index];
+    size = end_index - start_index;
+    if (size>0) {
+//        threads_per = 1 ; 
+        threads_per = 1 << (threads_log-1); 
+// modified July 11, 2020
+
+        forAllEdgesAdjUnionBalanced_TC(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 0);
+    }
+    start_index = end_index;
+
+    // imbalanced kernel
+    const int IMBALANCED_THREADS_LOGMAX = BINS_1D_DIM-1; 
+    bin_offset = MAX_ADJ_UNIONS_BINS/2;
+    threads_log = 1;
+    while ((threads_log < IMBALANCED_THREADS_LOGMAX) && (threads_log+LOG_OFFSET_IMBALANCED < BINS_1D_DIM)) 
+    {
+        bin_index = bin_offset+(threads_log+LOG_OFFSET_IMBALANCED)*BINS_1D_DIM;
+        end_index = queue_pos[bin_index];
+        size = end_index - start_index;
+        if (size>0) {
+            threads_per = 1 ; 
+//        threads_per = 1 << (threads_log-1); 
+// modified July 11, 2020
+            forAllEdgesAdjUnionImbalanced_TC(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 1);
+        }
+        start_index = end_index;
+        threads_log += 1;
+    }
+    // process remaining "tail" bins
+    bin_index = MAX_ADJ_UNIONS_BINS;
+    end_index = queue_pos[bin_index];
+    size = end_index - start_index;
+    if (size>0) {
+        threads_per = 1 ; 
+//        threads_per = 1 << (threads_log-1); 
+// modified July 11, 2020
+        forAllEdgesAdjUnionImbalanced_TC(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 1);
+    }
+
+    hornets_nest::gpu::free(hd_queue_info().d_queue_pos, hd_queue_info().d_queue_sizes, hd_queue_info().d_edge_queue);
+
+    free(queue_sizes);
+    free(queue_pos);
+}
+
 
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionSequential(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long size, const Operator &op, int flag) {
@@ -501,6 +763,7 @@ void forAllEdgesAdjUnionSequential(HornetClass &hornet, typename HornetClass::Ve
         (hornet.device(), queue, size, op, flag);
     CHECK_CUDA_ERROR
 }
+
 
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionBalanced(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
@@ -519,6 +782,24 @@ void forAllEdgesAdjUnionBalanced(HornetClass &hornet, typename HornetClass::Vert
         (hornet.device(), queue, start, end, threads_per_union, flag, op);
     CHECK_CUDA_ERROR
 }
+//Modified July, 23, 2020
+template<typename HornetClass, typename Operator>
+void forAllEdgesAdjUnionBalanced_TC(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
+    unsigned long long size = end - start; // end is exclusive
+    auto grid_size = size*threads_per_union;
+    auto _size = size;
+    while (grid_size > (1ULL<<31)) {
+        // FIXME get 1<<31 from Hornet
+        _size >>= 1;
+        grid_size = _size*threads_per_union;
+    }
+    if (size == 0)
+        return;
+    detail::forAllEdgesAdjUnionBalancedKernel_TC
+        <<< xlib::ceil_div<BLOCK_SIZE_OP2>(grid_size), BLOCK_SIZE_OP2 >>>
+        (hornet.device(), queue, start, end, threads_per_union, flag, op);
+    CHECK_CUDA_ERROR
+}
 
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionImbalanced(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
@@ -533,6 +814,24 @@ void forAllEdgesAdjUnionImbalanced(HornetClass &hornet, typename HornetClass::Ve
     if (size == 0)
         return;
     detail::forAllEdgesAdjUnionImbalancedKernel
+        <<< xlib::ceil_div<BLOCK_SIZE_OP2>(grid_size), BLOCK_SIZE_OP2 >>>
+        (hornet.device(), queue, start, end, threads_per_union, flag, op);
+    CHECK_CUDA_ERROR
+}
+//Modified July 26,2020
+template<typename HornetClass, typename Operator>
+void forAllEdgesAdjUnionImbalanced_TC(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
+    unsigned long long size = end - start; // end is exclusive
+    auto grid_size = size*threads_per_union;
+    auto _size = size;
+    while (grid_size > (1ULL<<31)) {
+        // FIXME get 1<<31 from Hornet
+        _size >>= 1;
+        grid_size = _size*threads_per_union;
+    }
+    if (size == 0)
+        return;
+    detail::forAllEdgesAdjUnionImbalancedKernel_TC
         <<< xlib::ceil_div<BLOCK_SIZE_OP2>(grid_size), BLOCK_SIZE_OP2 >>>
         (hornet.device(), queue, start, end, threads_per_union, flag, op);
     CHECK_CUDA_ERROR
