@@ -53,7 +53,7 @@ protected:
 
 };
 
-//Modified Kuly 26, 2020
+//Modified July 26, 2020
 class TC : public StaticAlgorithm<HornetGraph> {
 public:
     TC(HornetGraph& hornet);
