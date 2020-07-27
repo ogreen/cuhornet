@@ -16,8 +16,8 @@ int exec(int argc, char* argv[]) {
     using namespace graph;
 
 
-    // graph::GraphStd<vid_t, eoff_t> graph(graph::structure_prop::UNDIRECTED);
-    graph::GraphStd<vid_t, eoff_t> graph(graph::structure_prop::DIRECTED);
+    graph::GraphStd<vid_t, eoff_t> graph(graph::structure_prop::UNDIRECTED);
+//    graph::GraphStd<vid_t, eoff_t> graph(graph::structure_prop::DIRECTED);
     // CommandLineParam cmd(graph, argc, argv);
     graph.read(argv[1], SORT | PRINT_INFO );
 
@@ -51,6 +51,7 @@ int exec(int argc, char* argv[]) {
     TM.stop();
     TM.print("Transitive Closure");
 
+    printf("The end  %d %d\n",graph.nV(), graph.nE());
     // auto is_correct = cc_multistep.validate();
     // std::cout << (is_correct ? "\nCorrect <>\n\n" : "\n! Not Correct\n\n");
     // return !is_correct;
