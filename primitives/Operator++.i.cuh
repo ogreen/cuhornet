@@ -356,18 +356,18 @@ namespace adj_unions {
             degree_t v_len = (src_len <= dst_len) ? dst_len : src_len;
             unsigned int log_u = std::min(32-__clz(u_len), 31);
             unsigned int log_v = std::min(32-__clz(v_len), 31);
-            // int binary_work_est = u_len*log_v;
-            // int intersect_work_est = u_len + v_len + log_u;
-            // int METHOD = ((WORK_FACTOR*intersect_work_est >= binary_work_est)); 
-            // if (!METHOD && u_len <= 1) {
-            //     bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2);
-            // } else if (!METHOD) {
-            //     bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_v*BINS_1D_DIM+log_u);
-            // } else {
-            //     bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_u*BINS_1D_DIM+log_v); 
-            // }
+            int binary_work_est = u_len*log_v;
+            int intersect_work_est = u_len + v_len + log_u;
+            int METHOD = ((WORK_FACTOR*intersect_work_est >= binary_work_est)); 
+            if (!METHOD && u_len <= 1) {
+                bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2);
+            } else if (!METHOD) {
+                bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_v*BINS_1D_DIM+log_u);
+            } else {
+                bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_u*BINS_1D_DIM+log_v); 
+            }
             // bin_index = (MAX_ADJ_UNIONS_BINS/2)+(log_v*BINS_1D_DIM+log_u); 
-            bin_index = (log_v*BINS_1D_DIM+log_u);
+            // bin_index = (log_v*BINS_1D_DIM+log_u);
 
             // Either count or add the item to the appropriate queue position
             if (countOnly)
