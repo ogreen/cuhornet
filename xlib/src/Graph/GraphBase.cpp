@@ -211,8 +211,10 @@ template<typename vid_t, typename eoff_t>
 GInfo GraphBase<vid_t, eoff_t>::getMarketHeader(std::ifstream& fin) {
     std::string header_lines;
     std::getline(fin, header_lines);
-    auto direction = header_lines.find("symmetric") != std::string::npos ?
-                        structure_prop::UNDIRECTED : structure_prop::DIRECTED;
+    // auto direction = header_lines.find("symmetric") != std::string::npos ?
+    //                     structure_prop::UNDIRECTED : structure_prop::DIRECTED;
+    auto direction = structure_prop::DIRECTED;
+
     if (header_lines.find("array") != std::string::npos)
         ERROR("The matrix is a vector")
     /*if (header_lines.find("integer") != std::string::npos)
@@ -231,9 +233,12 @@ GInfo GraphBase<vid_t, eoff_t>::getMarketHeader(std::ifstream& fin) {
     //    ERROR("The matrix is a vector")
 
     xlib::skip_lines(fin);
-    size_t num_edges = direction == structure_prop::UNDIRECTED ? num_lines * 2
-                                                               : num_lines;
-    _stored_undirected = direction == structure_prop::UNDIRECTED;
+    size_t num_edges = num_lines;
+    // size_t num_edges = direction = structure_prop::UNDIRECTED ? num_lines * 2
+    //                                                            : num_lines;
+
+    // _stored_undirected = direction == structure_prop::UNDIRECTED;
+    // _stored_undirected = structure_prop::DIRECTED;
     return { std::max(rows, columns), num_edges, num_lines, direction };
 }
 
