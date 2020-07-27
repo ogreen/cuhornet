@@ -209,6 +209,7 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
     }
 }
 
+/*
 //Modified July 23, 2020
 template<typename HornetDevice, typename T, typename Operator>
 __global__ void forAllEdgesAdjUnionBalancedKernel_TC(HornetDevice hornet, T* __restrict__ array, unsigned long long start, unsigned long long end, unsigned long long threads_per_union, int flag, Operator op) {
@@ -251,6 +252,7 @@ __global__ void forAllEdgesAdjUnionBalancedKernel_TC(HornetDevice hornet, T* __r
         }
     }
 }
+*/
 
 template<typename HornetDevice, typename T, typename Operator>
 __global__ void forAllEdgesAdjUnionImbalancedKernel(HornetDevice hornet, T* __restrict__ array, unsigned long long start, unsigned long long end, unsigned long long threads_per_union, int flag, Operator op) {
@@ -304,6 +306,8 @@ __global__ void forAllEdgesAdjUnionImbalancedKernel(HornetDevice hornet, T* __re
     }
 }
 
+
+/*
 //Modified July 26,2020
 
 template<typename HornetDevice, typename T, typename Operator>
@@ -357,6 +361,7 @@ __global__ void forAllEdgesAdjUnionImbalancedKernel_TC(HornetDevice hornet, T* _
     }
 }
 
+*/
 
 template<typename Operator, typename vid_t>
 __global__ void forAllnumVKernel(vid_t d_nV, Operator op) {
@@ -530,6 +535,8 @@ void forAllAdjUnions(HornetClass&         hornet,
 {
     forAllAdjUnions(hornet, TwoLevelQueue<vid2_t>(hornet, 0), op, WORK_FACTOR); // TODO: why can't just pass in 0?
 }
+
+/*
 //Modified July 23, 2020
 template<typename HornetClass, typename Operator>
 void forAllAdjUnion_TC(HornetClass&         hornet,
@@ -538,7 +545,7 @@ void forAllAdjUnion_TC(HornetClass&         hornet,
 {
     forAllAdjUnion_TC(hornet, TwoLevelQueue<vid2_t>(hornet, 0), op, WORK_FACTOR); // TODO: why can't just pass in 0?
 }
-
+*/
 template<typename HornetClass, typename Operator>
 void forAllAdjUnions(HornetClass&          hornet,
                      TwoLevelQueue<vid2_t> vertex_pairs,
@@ -640,6 +647,7 @@ void forAllAdjUnions(HornetClass&          hornet,
     free(queue_pos);
 }
 
+/*
 //Modified July 23, 2020
 template<typename HornetClass, typename Operator>
 void forAllAdjUnion_TC(HornetClass&          hornet,
@@ -753,6 +761,7 @@ void forAllAdjUnion_TC(HornetClass&          hornet,
     free(queue_pos);
 }
 
+*/
 
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionSequential(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long size, const Operator &op, int flag) {
@@ -782,6 +791,7 @@ void forAllEdgesAdjUnionBalanced(HornetClass &hornet, typename HornetClass::Vert
         (hornet.device(), queue, start, end, threads_per_union, flag, op);
     CHECK_CUDA_ERROR
 }
+/*
 //Modified July, 23, 2020
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionBalanced_TC(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
@@ -800,6 +810,7 @@ void forAllEdgesAdjUnionBalanced_TC(HornetClass &hornet, typename HornetClass::V
         (hornet.device(), queue, start, end, threads_per_union, flag, op);
     CHECK_CUDA_ERROR
 }
+*/
 
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionImbalanced(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
@@ -818,6 +829,7 @@ void forAllEdgesAdjUnionImbalanced(HornetClass &hornet, typename HornetClass::Ve
         (hornet.device(), queue, start, end, threads_per_union, flag, op);
     CHECK_CUDA_ERROR
 }
+/*
 //Modified July 26,2020
 template<typename HornetClass, typename Operator>
 void forAllEdgesAdjUnionImbalanced_TC(HornetClass &hornet, typename HornetClass::VertexType* queue, const unsigned long long start, const unsigned long long end, const Operator &op, unsigned long long threads_per_union, int flag) {
@@ -836,7 +848,7 @@ void forAllEdgesAdjUnionImbalanced_TC(HornetClass &hornet, typename HornetClass:
         (hornet.device(), queue, start, end, threads_per_union, flag, op);
     CHECK_CUDA_ERROR
 }
-
+*/
 template<typename Operator>
 void forAll(int size, const Operator& op) {
     if (size == 0)

@@ -53,36 +53,6 @@ protected:
 
 };
 
-//Modified July 26, 2020
-class TC : public StaticAlgorithm<HornetGraph> {
-public:
-    TC(HornetGraph& hornet);
-    ~TC();
-
-    void reset()    override;
-    void run()      override;
-    void release()  override;
-    bool validate() override { return true; }
-
-    void run(const int WORK_FACTOR);
-    void init();
-    void sortHornet();
-
-    void cleanGraph();
-
-protected:
-   // triangle_t* triPerVertex { nullptr };
-
-    trans_t* d_CountNewEdges;
-
-    vid_t* d_src { nullptr };
-    vid_t* d_dest { nullptr };
-    vid_t* d_srcOut { nullptr };
-    vid_t* d_destOut { nullptr };
-    // batch_t* d_batchSize { nullptr };
-
-};
-
 //==============================================================================
 
 } // namespace hornets_nest
@@ -102,18 +72,6 @@ TransitiveClosure::~TransitiveClosure(){
     release();
 }
 
-
-//Modified July,26, 2020
-namespace hornets_nest {
-
-TC::TC(HornetGraph& hornet) :
-                                       StaticAlgorithm(hornet){       
-    init();
-}
-
-TC::~TC(){
-    release();
-}
 
 struct SimpleBubbleSort {
 
@@ -548,17 +506,6 @@ void TransitiveClosure::run() {
     // forAllAdjUnions(hornet, OPERATOR_AdjIntersectionCountBalanced { triPerVertex }, 1);
 }
 
-/Modified July 26, 2020
-void TC::reset(){
-
-    cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
-    sortHornet();
-}
-
-void TC::run() {
-    // forAllAdjUnions(hornet, OPERATOR_AdjIntersectionCountBalanced { triPerVertex }, 1);
-}
-
 void TransitiveClosure::run(const int WORK_FACTOR=1){
 
     int iterations=0;
@@ -684,173 +631,7 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
 }
 
 
-//Modified July 26, 2020
-void TC::run(const int WORK_FACTOR=1){
-
-    int iterations=0;
-    while(true){
-
-//        printf("TransitiveClosure::run \n");
-        cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
-//        printf("before for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
-        forAllAdjUnions_TC(hornet, OPERATOR_AntisectionCountBalanced<true> { d_CountNewEdges, d_src, d_dest }, WORK_FACTOR);
-
-//        printf("after for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
-        trans_t h_batchSize;
-        cudaMemcpy(&h_batchSize,d_CountNewEdges, sizeof(trans_t),cudaMemcpyDeviceToHost);
-
-//        printf("after counting, h_batchSize=%lld\n",h_batchSize);
-        if(h_batchSize==0){
-            break;
-        }
-        // h_batchSize *=2;
-        printf("First  - New batch size is %lld and HornetSize %d \n", h_batchSize, hornet.nE());
-
-
-        cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
-        // gpu::allocate(d_src, h_batchSize);
-        // gpu::allocate(d_dest, h_batchSize);
-
-        cudaMallocManaged(&d_src, h_batchSize*sizeof(vid_t));
-        cudaMallocManaged(&d_dest, h_batchSize*sizeof(vid_t));
-        cudaMallocManaged(&d_srcOut, h_batchSize*sizeof(vid_t));
-        cudaMallocManaged(&d_destOut, h_batchSize*sizeof(vid_t));
-//changed in July,2 2020*/
-//        cudaMallocManaged(&d_src, h_batchSize*sizeof(trans_t));
-//        cudaMallocManaged(&d_dest, h_batchSize*sizeof(trans_t));
-//        cudaMallocManaged(&d_srcOut, h_batchSize*sizeof(trans_t));
-//        cudaMallocManaged(&d_destOut, h_batchSize*sizeof(trans_t));
-
-        // gpu::allocate(d_src, h_batchSize);
-        // gpu::allocate(d_dest, h_batchSize);
-
-        //printf("Again before for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
-        forAllAdjUnions_TC(hornet, OPERATOR_AntisectionCountBalanced<false> { d_CountNewEdges, d_src, d_dest }, WORK_FACTOR);
-        //printf("Again after for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
-        cudaDeviceSynchronize();
-        trans_t unFilterBatchSize = h_batchSize;
-        vid_t* temp;
-
-//        if(0){
-        if(1){
-//Modified July 14,2020
-            void     *d_temp_storage = NULL;
-            size_t   temp_storage_bytes = 0;
-// July 2, 2020
-//            vid_t   temp_storage_bytes = 0;
-            cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes,
-                d_dest, d_destOut, d_src, d_srcOut, h_batchSize);
-            // Allocate temporary storage
-            cudaMallocManaged(&d_temp_storage, temp_storage_bytes);
-            // Run sorting operation
-
-
-            cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes,
-                d_dest, d_destOut, d_src, d_srcOut, h_batchSize);
-            cudaDeviceSynchronize();
-            temp = d_dest; d_dest=d_destOut; d_destOut=temp;
-            temp = d_src; d_src=d_srcOut; d_srcOut=temp;
-
-            cub::DeviceRadixSort::SortPairs(d_temp_storage, temp_storage_bytes,
-                 d_src, d_srcOut, d_dest, d_destOut, h_batchSize);
-            cudaDeviceSynchronize();
-            temp = d_dest; d_dest=d_destOut; d_destOut=temp;
-            temp = d_src; d_src=d_srcOut; d_srcOut=temp;
-
-            gpu::free(d_temp_storage);
-
-        }else{
-            thrust::stable_sort_by_key(thrust::device, d_dest, d_dest + h_batchSize, d_src);
-            thrust::stable_sort_by_key(thrust::device, d_src, d_src + h_batchSize, d_dest);            
-            cudaDeviceSynchronize();
-        }
-
-        cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
-        filterSortedBatch<<<1024,256>>>(unFilterBatchSize,d_CountNewEdges,d_src,d_dest,d_srcOut,d_destOut);
-        cudaDeviceSynchronize();
-
-        trans_t h_batchSizeNew;
-
-        cudaMemcpy(&h_batchSizeNew,d_CountNewEdges, sizeof(trans_t),cudaMemcpyDeviceToHost);
-        temp = d_dest; d_dest=d_destOut; d_destOut=temp;
-        temp = d_src; d_src=d_srcOut; d_srcOut=temp;
-
-        printf("Intermediate - Before  %lld and after %lld\n", h_batchSize,h_batchSizeNew);
-
-
-        gpu::free(d_srcOut);
-        gpu::free(d_destOut);
-
-        if(!h_batchSizeNew){
-            break;
-        }
-
-        UpdatePtr ptr(h_batchSizeNew, d_src, d_dest);
-        Update batch_update(ptr);
-//        hornet.insert(batch_update,true,true);
-        hornet.insert(batch_update,false,false);
-//modified July 11, 2020
-        cudaDeviceSynchronize();
-        printf("Second - New batch size is %lld and HornetSize %d \n", h_batchSizeNew, hornet.nE());
-
-        sortHornet();
-
-
-        gpu::free(d_src);
-        gpu::free(d_dest);
-
-        iterations++;
-
-        cleanGraph();
-        printf("After clean Number of edges in  graph is: %d\n",hornet.nE());
-        printf("After clean Number of vertexes in  graph is: %d\n",hornet.nV());
-        // if(iterations==1)
-        //     break;
-    }
-}
-
 void TransitiveClosure::cleanGraph(){
-
-        cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
-
-
-        printf("enter clean graph, before for all vertices\n");
-        forAllVertices(hornet, findDuplicatesForRemoval<true>{d_CountNewEdges, d_src, d_dest});
-
-        trans_t h_batchSize;
-        cudaMemcpy(&h_batchSize,d_CountNewEdges, sizeof(trans_t),cudaMemcpyDeviceToHost);
-
-        if(!h_batchSize)
-            return;
-
-        cudaMallocManaged(&d_src, h_batchSize*sizeof(vid_t));
-        cudaMallocManaged(&d_dest, h_batchSize*sizeof(vid_t));
-//      changed on July 2, 2020
-//        cudaMallocManaged(&d_src, h_batchSize*sizeof(trans_t));
-//        cudaMallocManaged(&d_dest, h_batchSize*sizeof(trans_t));
-
-        cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
-
-
-        forAllVertices(hornet, findDuplicatesForRemoval<false>{d_CountNewEdges, d_src, d_dest});
-        printf("Number of duplicates in initial graph is: %lld\n",h_batchSize);
-
-        UpdatePtr ptr(h_batchSize, d_src, d_dest);
-        Update batch_update(ptr);
-        hornet.erase(batch_update);
-
-        cudaDeviceSynchronize();
-
-        sortHornet();
-
-        gpu::free(d_src);
-        gpu::free(d_dest);
-
-}
-
-
-//Modified Kuly 26, 2020
-void TC::cleanGraph(){
 
         cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
 
@@ -899,32 +680,11 @@ void TransitiveClosure::init(){
     gpu::allocate(d_CountNewEdges, 1);
     reset();
 }
-
-//Modified July 26, 2020
-void TC::release(){
-    gpu::free(d_CountNewEdges);
-    d_CountNewEdges = nullptr;
-}
-
-void TC::init(){
-    gpu::allocate(d_CountNewEdges, 1);
-    reset();
-}
-
 //void TransitiveClosure::sortHornet(){
 //    forAllVertices(hornet, SimpleBubbleSort {});
 //}
 
  void TransitiveClosure::sortHornet(){
-    forAllVertices(hornet, SimpleBubbleSort {});
-//    hornet.sort();
-//Modified on July 14,2020
-
- } 
-
-
-//Modified July 26, 2020
- void TC::sortHornet(){
     forAllVertices(hornet, SimpleBubbleSort {});
 //    hornet.sort();
 //Modified on July 14,2020
