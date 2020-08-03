@@ -125,6 +125,33 @@ struct SimpleBubbleSort {
 
 
 
+// vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound)
+__device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound)
+{
+                vid_t tmp_low, tmp_up, tmp_mid;
+                tmp_low=0;
+                tmp_up=u_bound-l_bound;
+		if (*u_bound<=search_val) {
+			return u_bound;
+		}	
+                while ( (*(l_bound+tmp_low) < search_val) && (tmp_low<tmp_up)) {
+                    tmp_mid = (tmp_up+tmp_low)/2;
+                    vid_t  comp = (*(l_bound+tmp_mid) - search_val);
+                    if (!comp) {
+			return l_bound+tmp_mid;
+                    }
+                    if (comp > 0) {
+//                        u_bound=l_bound+tmp_mid;
+			tmp_up=tmp_mid-1;
+                    } else if (comp < 0) {
+			tmp_low=tmp_mid+1;
+//                        l_bound=l_bound+tmp_mid+1;
+                    }
+                }
+		return l_bound+tmp_low;
+
+}
+
 template <bool countOnly>
 struct OPERATOR_AdjIntersectionCountBalanced {
     trans_t* d_CountNewEdges;
@@ -444,31 +471,6 @@ struct OPERATOR_AntisectionCountBalanced {
     }
 };
 
- vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound)
-//__device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound)
-{
-                vid_t tmp_low, tmp_up, tmp_mid;
-                tmp_low=0;
-                tmp_up=u_bound-l_bound;
-                while (l_bound < u_bound) {
-			if (*u_bound<=search_val) {
-				return u_bound;
-			}	
-                    tmp_up=u_bound-l_bound;
-                    tmp_mid = (tmp_up+tmp_low)/2;
-                    vid_t  comp = (*(l_bound+tmp_mid) - search_val);
-                    if (!comp) {
-			return l_bound+tmp_mid;
-                    }
-                    if (comp > 0) {
-                        u_bound=l_bound+tmp_mid;
-                    } else if (comp < 0) {
-                        l_bound=l_bound+tmp_mid+1;
-                    }
-                }
-		return u_bound;
-
-}
 __global__ void filterSortedBatch(trans_t originalBatchSize, trans_t* newBatchSize, 
     vid_t* srcSorted, vid_t* destSorted,
     vid_t* srcFiltered, vid_t* destFiltered){
