@@ -238,6 +238,10 @@ void forAllEdges(HornetClass&                hornet,
 //                    const BatchUpdate& batch_update,
 //                    const Operator& op);
 
+
+// vid_t * BinaryLBoundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound);
+//__device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound);
+
 } // namespace hornets_nest
 
 #include "Operator++.i.cuh"
