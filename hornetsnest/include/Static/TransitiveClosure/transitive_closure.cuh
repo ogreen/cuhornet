@@ -35,6 +35,8 @@ public:
     bool validate() override { return true; }
 
     void run(const int WORK_FACTOR);
+    void runWithHash(const int WORK_FACTOR);
+
     void init();
     void sortHornet();
 
@@ -433,7 +435,7 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
         trans_t unFilterBatchSize = h_batchSize;
         vid_t* temp;
 
-        if(1){
+        if(0){
             void     *d_temp_storage = NULL;
             size_t   temp_storage_bytes = 0;
 // July 2, 2020
@@ -459,17 +461,20 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
 
             gpu::free(d_temp_storage);
 
-        }else{
+        }else if(0){
             thrust::stable_sort_by_key(thrust::device, d_dest, d_dest + h_batchSize, d_src);
             thrust::stable_sort_by_key(thrust::device, d_src, d_src + h_batchSize, d_dest);            
             cudaDeviceSynchronize();
         }
 
+        trans_t h_batchSizeNew;
+
+
+
+    if(0){
         cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
         filterSortedBatch<<<1024,256>>>(unFilterBatchSize,d_CountNewEdges,d_src,d_dest,d_srcOut,d_destOut);
         cudaDeviceSynchronize();
-
-        trans_t h_batchSizeNew;
 
         cudaMemcpy(&h_batchSizeNew,d_CountNewEdges, sizeof(trans_t),cudaMemcpyDeviceToHost);
         temp = d_dest; d_dest=d_destOut; d_destOut=temp;
@@ -482,24 +487,58 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
         gpu::free(d_destOut);
 
         if(!h_batchSizeNew){
+            printf("REALLY Surprised\n");
             break;
         }
+    }else{
+        gpu::free(d_srcOut);
+        gpu::free(d_destOut);
 
-        UpdatePtr ptr(h_batchSizeNew, d_src, d_dest);
+        h_batchSizeNew=h_batchSize;
+    }
+
+
+    trans_t batchPos=0;
+    trans_t maxSize=100000000;
+    trans_t curSize=100000000;
+
+    while(batchPos<h_batchSizeNew){
+
+        if((batchPos+maxSize)>h_batchSizeNew){
+            curSize = h_batchSizeNew-batchPos;
+        }
+
+        UpdatePtr ptr(curSize, d_src+batchPos, d_dest+batchPos);
         Update batch_update(ptr);
-        hornet.insert(batch_update,false,false);
-        cudaDeviceSynchronize();
-        printf("Second - New batch size is %lld and HornetSize %d \n", h_batchSizeNew, hornet.nE());
+        hornet.insert(batch_update,true,false);
+        cleanGraph();
 
-        sortHornet();
+        // cudaDeviceSynchronize();
+        // printf("Second - New batch size is %lld and HornetSize %d \n", h_batchSizeNew, hornet.nE());
+        batchPos+=curSize;
+        // std::cout << "batchpos " << batchPos << std::endl;
+        std::cout << "Edges " << hornet.nE() << std::endl;
+    }
 
+
+
+
+        // UpdatePtr ptr(h_batchSizeNew, d_src, d_dest);
+        // Update batch_update(ptr);
+        // hornet.insert(batch_update,true,false);
+        // cudaDeviceSynchronize();
+        // printf("Second - New batch size is %lld and HornetSize %d \n", h_batchSizeNew, hornet.nE());
 
         gpu::free(d_src);
         gpu::free(d_dest);
 
+        sortHornet();
+
+
+
         iterations++;
 
-        cleanGraph();
+        // cleanGraph();
         // if(iterations==1)
         //     break;
     }
@@ -518,6 +557,10 @@ void TransitiveClosure::cleanGraph(){
 
         if(!h_batchSize)
             return;
+
+        vid_t* d_src { nullptr };
+        vid_t* d_dest { nullptr };
+        
 
         cudaMallocManaged(&d_src, h_batchSize*sizeof(vid_t));
         cudaMallocManaged(&d_dest, h_batchSize*sizeof(vid_t));
@@ -567,4 +610,188 @@ void TransitiveClosure::init(){
 
 
 
+//-----------------------------------------------------------------------------
+// MurmurHash3 was written by Austin Appleby, and is placed in the public
+// domain. The author hereby disclaims copyright to this source code.
+// Note - The x86 and x64 versions do _not_ produce the same results, as the
+// algorithms are optimized for their respective platforms. You can still
+// compile and run any of them on any platform, but your performance with the
+// non-native version will be less than optimal.
+
+__forceinline__  __host__ __device__ uint32_t rotl32( uint32_t x, int8_t r ) {
+    return (x << r) | (x >> (32 - r));
+  }
+  
+  __forceinline__ __host__ __device__ uint32_t fmix32( uint32_t h ) {
+    h ^= h >> 16;
+    h *= 0x85ebca6b;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35;
+    h ^= h >> 16;
+    return h;
+  }
+  
+  __forceinline__  __host__ __device__ uint32_t hash_murmur(const int64_t& key) {
+  
+    constexpr int len = sizeof(int64_t);
+    const uint8_t * const data = (const uint8_t*)&key;
+    constexpr int nblocks = len / 4;
+    uint32_t h1 = 0;
+    constexpr uint32_t c1 = 0xcc9e2d51;
+    constexpr uint32_t c2 = 0x1b873593;
+    //----------
+  
+    // body
+    const uint32_t * const blocks = (const uint32_t *)(data + nblocks*4);
+    for(int i = -nblocks; i; i++)
+    {
+      uint32_t k1 = blocks[i];
+      k1 *= c1;
+      k1 = rotl32(k1,15);
+      k1 *= c2;
+      h1 ^= k1;
+      h1 = rotl32(h1,13); 
+      h1 = h1*5+0xe6546b64;
+    }
+    //----------
+    // tail
+    const uint8_t * tail = (const uint8_t*)(data + nblocks*4);
+    uint32_t k1 = 0;
+    switch(len & 3)
+    {
+      case 3: k1 ^= tail[2] << 16;
+      case 2: k1 ^= tail[1] << 8;
+      case 1: k1 ^= tail[0];
+              k1 *= c1; k1 = rotl32(k1,15); k1 *= c2; h1 ^= k1;
+    };
+    //----------
+    // finalization
+    h1 ^= len;
+    h1 = fmix32(h1);
+    return h1;
+  }
+
+
+ struct OPERATOR_AdjIntersectionCountBalancedWithHash {
+    trans_t* d_CountNewEdges;
+    vid_t* d_src ;
+    vid_t* d_dest;
+    int* d_hash;
+    int d_hashSize;
+
+
+    OPERATOR(Vertex &u_, Vertex& v_, vid_t* ui_begin_, vid_t* ui_end_, vid_t* vi_begin_, vid_t* vi_end_, int FLAG){
+        int count = 0;
+	int i=0;
+    	int     id = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if ((FLAG& 1)==1) return;
+	vid_t u_id=u_.id();
+	vid_t v_id=v_.id();
+	degree_t u_degree=u_.degree();
+	degree_t v_degree=v_.degree();
+	vid_t* ui_begin=ui_begin_;
+	vid_t* ui_end=ui_end_;
+	vid_t* vi_begin=vi_begin_;
+	vid_t* vi_end=vi_end_;
+
+    if(FLAG&2){
+        u_id=v_.id();
+        v_id=u_.id();
+        u_degree=v_.degree();
+        v_degree=u_.degree();
+        ui_begin=vi_begin_;
+        ui_end=vi_end_;
+        vi_begin=ui_begin_;
+        vi_end=ui_end_;
+	}
+
+	i=0;
+
+
+        while( vi_begin <= vi_end){
+            while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+                ui_begin+=1;
+            }
+            if ((vid_t)(*vi_begin)==(vid_t)(*ui_begin)) {
+			    vi_begin+=1;
+		    	continue;
+	        }
+            if((vid_t)(*vi_begin) != (vid_t)u_id){
+                // Zehui 
+                int64_t pair = u_id + ((int64_t)(*vi_begin)<<32L);
+                uint32_t hval = (hash_murmur(pair)%d_hashSize) +1 ;
+                
+                // printf("%d ", hval);
+                if(d_hash[hval]==0){ // Avoids doing atomics if value has already been set
+                    int success = atomicCAS(d_hash+hval,0,1 );
+                    if(success==0){
+                        trans_t pos = atomicAdd(d_CountNewEdges, 1);
+                        d_src[pos]  = u_id;
+                        d_dest[pos] = *vi_begin;
+                    }    
+                }
+            }
+            vi_begin +=1;
+        }
+    }
+};
+
+
+void TransitiveClosure::runWithHash(const int WORK_FACTOR=1){
+
+    int iterations=0;
+    int* d_hash;
+    const int HASH_TABLE_SIZE = 200000000;
+    cudaMalloc(&d_src, HASH_TABLE_SIZE*sizeof(vid_t));
+    cudaMalloc(&d_dest, HASH_TABLE_SIZE*sizeof(vid_t));
+    cudaMalloc(&d_hash, HASH_TABLE_SIZE*sizeof(int));
+
+
+    while(true){
+
+        // HASH_TABLE_SIZE == number of elements in hashtable
+
+//        printf("TransitiveClosure::run \n");
+        cudaMemset(d_CountNewEdges,0,sizeof(trans_t));
+        cudaMemset(d_hash,0,HASH_TABLE_SIZE*sizeof(int));
+
+        //        printf("before for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
+        forAllAdjUnions(hornet, OPERATOR_AdjIntersectionCountBalancedWithHash { d_CountNewEdges, d_src, d_dest,d_hash,HASH_TABLE_SIZE }, WORK_FACTOR);
+
+//        printf("after for all adj unions ,WORK_FACTOR=%d\n",WORK_FACTOR);
+        trans_t h_batchSize;
+        cudaMemcpy(&h_batchSize,d_CountNewEdges, sizeof(trans_t),cudaMemcpyDeviceToHost);
+
+        if (h_batchSize==0){
+            break;
+        }
+        UpdatePtr ptr(h_batchSize, d_src, d_dest);
+        Update batch_update(ptr);
+        hornet.insert(batch_update,false,false);
+
+        sortHornet();
+
+        std::cout << "Edges " << hornet.nE() << std::endl;
+        
+
+        iterations++;
+
+        // cleanGraph();
+        // if(iterations==1)
+        //     break;
+    }
+    std::cout << "Edges " << hornet.nE() << std::endl;
+
+    gpu::free(d_src);
+    gpu::free(d_dest);
+    gpu::free(d_hash);
+
+}
+
+
+
+
+
 } // namespace hornets_nest
+

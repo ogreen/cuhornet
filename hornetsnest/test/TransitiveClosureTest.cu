@@ -15,11 +15,15 @@ int exec(int argc, char* argv[]) {
     using namespace graph::parsing_prop;
     using namespace graph;
 
-
     // graph::GraphStd<vid_t, eoff_t> graph(graph::structure_prop::UNDIRECTED);
     graph::GraphStd<vid_t, eoff_t> graph(graph::structure_prop::DIRECTED);
     // CommandLineParam cmd(graph, argc, argv);
     graph.read(argv[1], SORT | PRINT_INFO );
+
+    int alg=0;
+    if(argc==3){
+        alg = atoi(argv[2]);
+    }
 
     printf("Very start %d %d\n",graph.nV(), graph.nE());
 
@@ -46,8 +50,11 @@ int exec(int argc, char* argv[]) {
     Timer<DEVICE> TM;
     TM.start();
 
-    transClos.run(0);
-
+    if(alg==0){
+        transClos.run(0);
+    }else{
+        transClos.runWithHash(0);
+    }
     TM.stop();
     TM.print("Transitive Closure");
 
