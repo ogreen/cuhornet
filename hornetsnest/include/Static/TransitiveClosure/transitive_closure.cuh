@@ -276,15 +276,15 @@ struct OPERATOR_AdjIntersectionCountBalanced {
 
 
         while( vi_begin <= vi_end){
-	     while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
-		      ui_begin+=1;
-	     }
+//	     while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+//		      ui_begin+=1;
+//	     }
 //Optimization version Aug.3, 2020
-//             if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
-//                          ui_begin=BinaryLboundSearch(*vi_begin,ui_begin,ui_end);
+             if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+                          ui_begin=BinaryLboundSearch(*vi_begin,ui_begin,ui_end);
 //ui_begin is updated by the search result, it is the first element in adj(u) not less than *vi_begin.
 // or it is the last ui_end
-//             }
+             }
 
 
 
