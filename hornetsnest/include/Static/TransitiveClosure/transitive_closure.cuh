@@ -125,6 +125,32 @@ struct SimpleBubbleSort {
 };
 
 
+__device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t * u_bound)
+{
+                vid_t tmp_low, tmp_up, tmp_mid;
+                tmp_low=0;
+                tmp_up=u_bound-l_bound;
+                if (*u_bound<=search_val) {
+                        return u_bound;
+                }
+                while ( (*(l_bound+tmp_low) < search_val) && (tmp_low<tmp_up)) {
+                    tmp_mid = (tmp_up+tmp_low)/2;
+                    vid_t  comp = (*(l_bound+tmp_mid) - search_val);
+                    if (!comp) {
+                        return l_bound+tmp_mid;
+                    }
+                    if (comp > 0) {
+//                        u_bound=l_bound+tmp_mid;
+                        tmp_up=tmp_mid-1;
+                    } else if (comp < 0) {
+                        tmp_low=tmp_mid+1;
+//                        l_bound=l_bound+tmp_mid+1;
+                    }
+                }
+                return l_bound+tmp_low;
+
+}
+
 
 template <bool countOnly>
 struct OPERATOR_AdjIntersectionCountBalanced {
@@ -253,6 +279,15 @@ struct OPERATOR_AdjIntersectionCountBalanced {
 	     while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
 		      ui_begin+=1;
 	     }
+//Optimization version Aug.3, 2020
+//             if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+//                          ui_begin=BinaryLboundSearch(*vi_begin,ui_begin,ui_end);
+//ui_begin is updated by the search result, it is the first element in adj(u) not less than *vi_begin.
+// or it is the last ui_end
+//             }
+
+
+
              if ((vid_t)(*vi_begin)==(vid_t)(*ui_begin)) {
 			vi_begin+=1;
 			continue;
