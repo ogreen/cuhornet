@@ -720,7 +720,9 @@ __forceinline__  __host__ __device__ uint32_t rotl32( uint32_t x, int8_t r ) {
             if((vid_t)(*vi_begin) != (vid_t)u_id){
                 // Zehui 
                 int64_t pair = u_id + ((int64_t)(*vi_begin)<<32L);
-                uint32_t hval = (hash_murmur(pair)%d_hashSize) +1 ;
+                uint32_t hval = (hash_murmur(pair)%d_hashSize) ;
+//                uint32_t hval = (hash_murmur(pair)%d_hashSize) +1 ;
+// Aut.7, 2020 remove +1 to avoid out of range
                 
                 // printf("%d ", hval);
                 if(d_hash[hval]==0){ // Avoids doing atomics if value has already been set
