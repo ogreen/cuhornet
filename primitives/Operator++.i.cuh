@@ -113,7 +113,9 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
         auto dst_vtx = hornet.vertex(array[2*i+1]);
         int srcLen = src_vtx.degree();
         int destLen = dst_vtx.degree();
-        int total_work = srcLen + destLen - 1;
+        int total_work = destLen - 1;
+//        int total_work = srcLen + destLen - 1;
+//Aug.8, 2020
         vid_t src = src_vtx.id();
         vid_t dest = dst_vtx.id();
 
@@ -122,18 +124,37 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
         //     continue;
 
         // determine u,v where |adj(u)| <= |adj(v)|
+//        bool sourceSmaller = srcLen < destLen;
+//        vid_t u = sourceSmaller ? src : dest;
+//        vid_t v = sourceSmaller ? dest : src;
+//        auto u_vtx = sourceSmaller ? src_vtx : dst_vtx;
+//        auto v_vtx = sourceSmaller ? dst_vtx : src_vtx;
+//        degree_t u_len = sourceSmaller ? srcLen : destLen;
+//        degree_t v_len = sourceSmaller ? destLen : srcLen;
+//        vid_t* u_nodes = hornet.vertex(u).neighbor_ptr();
+//        vid_t* v_nodes = hornet.vertex(v).neighbor_ptr();
+//Aug.8,2020, it is not necessary for anti-section
+
         bool sourceSmaller = srcLen < destLen;
-        vid_t u = sourceSmaller ? src : dest;
-        vid_t v = sourceSmaller ? dest : src;
-        auto u_vtx = sourceSmaller ? src_vtx : dst_vtx;
-        auto v_vtx = sourceSmaller ? dst_vtx : src_vtx;
-        degree_t u_len = sourceSmaller ? srcLen : destLen;
-        degree_t v_len = sourceSmaller ? destLen : srcLen;
+        vid_t u = src;
+        vid_t v = dest;
+        auto u_vtx = src_vtx;
+        auto v_vtx = dst_vtx;
+        degree_t u_len = srcLen;
+        degree_t v_len = destLen;
         vid_t* u_nodes = hornet.vertex(u).neighbor_ptr();
         vid_t* v_nodes = hornet.vertex(v).neighbor_ptr();
 
         int work_per_thread = total_work/threads_per_union;
-        int remainder_work = total_work % threads_per_union;
+        if (work_per_thread *threads_per_union<total_work) {
+             work_per_thread+=1;
+        }
+        int remainder_work = 0;
+//Aug.8, 2020
+//        int remainder_work = total_work % threads_per_union;
+
+/*
+// this is also not necessary for anti-section
         int diag_id, next_diag_id;
         diag_id = thread_union_id*work_per_thread + std::min(thread_union_id, remainder_work);
         next_diag_id = (thread_union_id+1)*work_per_thread + std::min(thread_union_id+1, remainder_work);
@@ -162,9 +183,19 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
         }
 
         __syncthreads();
-
+*/
         vid_t vi_begin, ui_begin, vi_end, ui_end;
         vi_begin = ui_begin = vi_end = ui_end = -1;
+
+        ui_begin=0;
+        ui_end = u_len - 1;
+        vi_begin=thread_union_id* work_per_thread;
+	vi_end=std::min((thread_union_id+1)* work_per_thread,v_len-1);
+	if (vi_begin<=vi_end) {
+            op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag);
+        }
+//It is not necessary for the following parts.
+/*
         int vi_inBounds, ui_inBounds;
         if (diag_id == 0) {
             vi_begin = 0;
@@ -203,6 +234,8 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
 //modified July 7,2020
             op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag2);
         }
+
+*/
     }
 }
 
@@ -444,7 +477,9 @@ void forAllAdjUnions(HornetClass&          hornet,
         end_index = queue_pos[bin_index];
         size = end_index - start_index;
         if (size) {
-            threads_per = 1;// << (threads_log-1); 
+//            threads_per = 1;// << (threads_log-1); 
+            threads_per = 16;// << (threads_log-1); 
+//Aug.8, 2020
             forAllEdgesAdjUnionBalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 0);
         }
         start_index = end_index;
@@ -455,7 +490,8 @@ void forAllAdjUnions(HornetClass&          hornet,
     end_index = queue_pos[bin_index];
     size = end_index - start_index;
     if (size) {
-        threads_per = 1;// << (threads_log-1); 
+//        threads_per = 1;// << (threads_log-1); 
+        threads_per = 16;// << (threads_log-1); 
         forAllEdgesAdjUnionBalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 0);
     }
     start_index = end_index;
@@ -470,7 +506,8 @@ void forAllAdjUnions(HornetClass&          hornet,
         end_index = queue_pos[bin_index];
         size = end_index - start_index;
         if (size) {
-            threads_per = 1;// << (threads_log-1); 
+//            threads_per = 1;// << (threads_log-1); 
+            threads_per = 16;// << (threads_log-1); 
             forAllEdgesAdjUnionImbalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 1);
         }
         start_index = end_index;
@@ -481,7 +518,8 @@ void forAllAdjUnions(HornetClass&          hornet,
     end_index = queue_pos[bin_index];
     size = end_index - start_index;
     if (size) {
-        threads_per = 1;// << (threads_log-1); 
+//        threads_per = 1;// << (threads_log-1); 
+        threads_per = 16;// << (threads_log-1); 
         forAllEdgesAdjUnionImbalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 1);
     }
 
