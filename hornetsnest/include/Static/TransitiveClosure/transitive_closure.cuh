@@ -135,7 +135,9 @@ __device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t 
                 if (*u_bound<=search_val) {
                         return u_bound;
                 }
- 		vid_t SmallSize=1024;
+/*
+Aug.9,2020. I have merged this part to calling codes
+ 		vid_t SmallSize=16;
 		if (tmp_up<SmallSize) {
 
                 	while ( (*(l_bound+tmp_low) < search_val) && (tmp_low<tmp_up)) {
@@ -143,6 +145,7 @@ __device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t 
 			}
                 	return l_bound+tmp_low;
 		}
+*/
                 while ( (*(l_bound+tmp_low) < search_val) && (tmp_low<tmp_up)) {
                     tmp_mid = (tmp_up+tmp_low)/2;
                     vid_t  comp = (*(l_bound+tmp_mid) - search_val);
@@ -287,14 +290,21 @@ struct OPERATOR_AdjIntersectionCountBalanced {
 //                 printf("v.id()=%d,v.neighbour_ptr()[%d]=%d,v.degree()=%d\n", v.id(),i,v.neighbor_ptr()[i],vsize );
 //             }
 
-
+        vid_t SmallSize=16;
         while( vi_begin <= vi_end){
-//	     while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
-//		      ui_begin+=1;
-//	     }
-//Optimization version Aug.3, 2020
-             if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+	     if ((ui_end-ui_begin)<=SmallSize){
+	     	while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+		          ui_begin+=1;
+                      } 
+		}
+	     else {
+	     	if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
                           ui_begin=BinaryLboundSearch(*vi_begin,ui_begin,ui_end);
+
+	     }   
+//Optimization version Aug.3, 2020
+//             if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+//                          ui_begin=BinaryLboundSearch(*vi_begin,ui_begin,ui_end);
 //ui_begin is updated by the search result, it is the first element in adj(u) not less than *vi_begin.
 // or it is the last ui_end
              }
