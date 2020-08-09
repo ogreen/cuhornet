@@ -477,8 +477,8 @@ void forAllAdjUnions(HornetClass&          hornet,
         end_index = queue_pos[bin_index];
         size = end_index - start_index;
         if (size) {
-            threads_per = 1;// << (threads_log-1); 
-//            threads_per = 16;// << (threads_log-1); 
+//            threads_per = 1;// << (threads_log-1); 
+            threads_per = 16;// << (threads_log-1); 
 //Aug.8, 2020
             forAllEdgesAdjUnionBalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 0);
         }
