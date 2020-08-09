@@ -400,7 +400,9 @@ namespace adj_unions {
                 bin_index = (METHOD*MAX_ADJ_UNIONS_BINS/2)+(log_u*BINS_1D_DIM+log_v); 
             }
             // bin_index = (MAX_ADJ_UNIONS_BINS/2)+(log_v*BINS_1D_DIM+log_u); 
-            // bin_index = (log_v*BINS_1D_DIM+log_u);
+            bin_index = (log_u*BINS_1D_DIM+log_v);
+//Aut.8, 2020
+//this bin_index is suitable for anti-section, not for intersection.
 
             // Either count or add the item to the appropriate queue position
             if (countOnly)
