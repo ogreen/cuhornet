@@ -730,10 +730,24 @@ __forceinline__  __host__ __device__ uint32_t rotl32( uint32_t x, int8_t r ) {
 	i=0;
 
 
+
+//Aug.9, build a combined pure loop and binary search version
+        vid_t SmallSize=16;
         while( vi_begin <= vi_end){
-            while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
-                ui_begin+=1;
-            }
+             if ((ui_end-ui_begin)<=SmallSize){
+                while (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+                          ui_begin+=1;
+                      }
+                }
+             else {
+                if (( (vid_t)(*vi_begin) >(vid_t)(*ui_begin)) && (ui_begin<ui_end)) {
+                          ui_begin=BinaryLboundSearch(*vi_begin,ui_begin,ui_end);
+//ui_begin is updated by the search result, it is the first element in adj(u) not less than *vi_begin.
+// or it is the last ui_end
+
+                 }
+             }
+
             if ((vid_t)(*vi_begin)==(vid_t)(*ui_begin)) {
 			    vi_begin+=1;
 		    	continue;
