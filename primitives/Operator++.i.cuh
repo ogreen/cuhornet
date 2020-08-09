@@ -145,10 +145,10 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
         vid_t* u_nodes = hornet.vertex(u).neighbor_ptr();
         vid_t* v_nodes = hornet.vertex(v).neighbor_ptr();
 
-        int work_per_thread = total_work/threads_per_union;
-        if (work_per_thread *threads_per_union<total_work) {
-             work_per_thread+=1;
-        }
+        int work_per_thread = ceil((float)total_work/(float)threads_per_union);
+//        if (work_per_thread *threads_per_union<total_work) {
+//             work_per_thread+=1;
+//        }
         int remainder_work = 0;
 //Aug.8, 2020
 //        int remainder_work = total_work % threads_per_union;
@@ -477,8 +477,8 @@ void forAllAdjUnions(HornetClass&          hornet,
         end_index = queue_pos[bin_index];
         size = end_index - start_index;
         if (size) {
-//            threads_per = 1;// << (threads_log-1); 
-            threads_per = 16;// << (threads_log-1); 
+            threads_per = 1;// << (threads_log-1); 
+//            threads_per = 16;// << (threads_log-1); 
 //Aug.8, 2020
             forAllEdgesAdjUnionBalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 0);
         }

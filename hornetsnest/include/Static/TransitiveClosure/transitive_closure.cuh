@@ -135,6 +135,14 @@ __device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t 
                 if (*u_bound<=search_val) {
                         return u_bound;
                 }
+ 		vid_t SmallSize=1024;
+		if (tmp_up<SmallSize) {
+
+                	while ( (*(l_bound+tmp_low) < search_val) && (tmp_low<tmp_up)) {
+				tmp_low+=1;
+			}
+                	return l_bound+tmp_low;
+		}
                 while ( (*(l_bound+tmp_low) < search_val) && (tmp_low<tmp_up)) {
                     tmp_mid = (tmp_up+tmp_low)/2;
                     vid_t  comp = (*(l_bound+tmp_mid) - search_val);
@@ -148,6 +156,9 @@ __device__ vid_t * BinaryLboundSearch( vid_t search_val, vid_t * l_bound, vid_t 
                         tmp_low=tmp_mid+1;
 //                        l_bound=l_bound+tmp_mid+1;
                     }
+                }
+		while (*(l_bound+tmp_low) < search_val) {
+                    tmp_low+=1;
                 }
                 return l_bound+tmp_low;
 
@@ -539,8 +550,8 @@ void TransitiveClosure::run(const int WORK_FACTOR=1){
         iterations++;
 
         // cleanGraph();
-        // if(iterations==1)
-        //     break;
+//         if(iterations==7)
+//             break;
     }
 }
 
@@ -744,7 +755,8 @@ void TransitiveClosure::runWithHash(const int WORK_FACTOR=1){
 
     int iterations=0;
     int* d_hash;
-    const int HASH_TABLE_SIZE = 200000000;
+//    const int HASH_TABLE_SIZE = 200000000;
+    const int HASH_TABLE_SIZE = 50000000;
     cudaMalloc(&d_src, HASH_TABLE_SIZE*sizeof(vid_t));
     cudaMalloc(&d_dest, HASH_TABLE_SIZE*sizeof(vid_t));
     cudaMalloc(&d_hash, HASH_TABLE_SIZE*sizeof(int));
@@ -780,8 +792,8 @@ void TransitiveClosure::runWithHash(const int WORK_FACTOR=1){
         iterations++;
 
         // cleanGraph();
-        // if(iterations==1)
-        //     break;
+//         if(iterations==7)
+//             break;
     }
     std::cout << "Edges " << hornet.nE() << std::endl;
 

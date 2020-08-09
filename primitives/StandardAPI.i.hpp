@@ -65,6 +65,21 @@ namespace gpu {
 
 void initializeRMMPoolAllocation(const size_t initPoolSize) {
     rmmOptions_t options;
+    if(initPoolSize==0){
+        options.allocation_mode = CudaDefaultAllocation; 
+    }else{
+        options.allocation_mode = PoolAllocation;
+        options.initial_pool_size = initPoolSize;
+    }
+     auto result = rmmInitialize(&options);
+      if (result != RMM_SUCCESS) {
+         RMM_ERROR_HANDLER("hornets_nest::gpu::initializeRMMPoolAllocation", "rmmInitialize", result);
+     }
+}
+//Aug.8, this function is replaced by the new one
+/*
+void initializeRMMPoolAllocation(const size_t initPoolSize) {
+    rmmOptions_t options;
     options.allocation_mode = PoolAllocation;
     options.initial_pool_size = initPoolSize;
     auto result = rmmInitialize(&options);
@@ -72,7 +87,7 @@ void initializeRMMPoolAllocation(const size_t initPoolSize) {
         RMM_ERROR_HANDLER("hornets_nest::gpu::initializeRMMPoolAllocation", "rmmInitialize", result);
     }
 }
-
+*/
 void finalizeRMMPoolAllocation(void) {
     auto result = rmmFinalize();
     if (result != RMM_SUCCESS) {
