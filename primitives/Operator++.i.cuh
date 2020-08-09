@@ -191,7 +191,7 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
         ui_end = u_len - 1;
         vi_begin=thread_union_id* work_per_thread;
 	vi_end=std::min((thread_union_id+1)* work_per_thread,v_len-1);
-	if (vi_begin<=vi_end) {
+	if ((vi_begin<=vi_end)&&(ui_begin<=ui_end)) {
             op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag);
         }
 //It is not necessary for the following parts.
@@ -502,6 +502,8 @@ void forAllAdjUnions(HornetClass&          hornet,
     threads_log = 1;
     while ((threads_log < IMBALANCED_THREADS_LOGMAX) && (threads_log+LOG_OFFSET_IMBALANCED < BINS_1D_DIM)) 
     {
+	printf("Wrong! for modified anti-section, this codes should not be executed\n");
+
         bin_index = bin_offset+(threads_log+LOG_OFFSET_IMBALANCED)*BINS_1D_DIM;
         end_index = queue_pos[bin_index];
         size = end_index - start_index;
@@ -520,6 +522,7 @@ void forAllAdjUnions(HornetClass&          hornet,
     if (size) {
 //        threads_per = 1;// << (threads_log-1); 
         threads_per = 16;// << (threads_log-1); 
+	printf("Wrong! for modified anti-section, this codes should not be executed\n");
         forAllEdgesAdjUnionImbalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 1);
     }
 
