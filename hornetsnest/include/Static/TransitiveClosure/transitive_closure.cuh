@@ -160,7 +160,7 @@ Aug.9,2020. I have merged this part to calling codes
 //                        l_bound=l_bound+tmp_mid+1;
                     }
                 }
-		while (*(l_bound+tmp_low) < search_val) {
+               	while ( (*(l_bound+tmp_low) < search_val) && (l_bound+tmp_low<u_bound)) {
                     tmp_low+=1;
                 }
                 return l_bound+tmp_low;
