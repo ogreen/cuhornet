@@ -46,6 +46,7 @@
 #include "Queue/TwoLevelQueue.cuh"
 #include "StandardAPI.hpp"
 #include "HostDeviceVar.cuh"
+#include "LoadBalancing/lrb_lb.cuh"
 #include "LoadBalancing/BinarySearch.cuh"
 #include "LoadBalancing/lrb_lb.cuh"
 

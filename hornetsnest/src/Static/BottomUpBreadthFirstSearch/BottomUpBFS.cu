@@ -119,12 +119,11 @@ BfsBottomUp2::BfsBottomUp2(HornetGraph& hornet, HornetGraph& hornet_in) :
                                  queue(hornet, 5),
                                  queue_inf(hornet),
                                  load_balancing(hornet) {
-    gpu::allocate(d_distances, hornet.nV());
+    pool.allocate(&d_distances, hornet.nV());
     reset();
 }
 
 BfsBottomUp2::~BfsBottomUp2() {
-    gpu::free(d_distances);
 }
 
 void BfsBottomUp2::reset() {
@@ -163,9 +162,12 @@ void BfsBottomUp2::run(HornetGraph& hornet_in) {
        int nv = hornet.nV();
        int bu_flag = 0;
 
+       int elements = 0;
+
     while (queue.size() > 0) {
 
         qs = queue.size();
+        elements +=qs;
         td = (float)nv/(float)qs > 40 ? 1 : 0;
 
         //top down
@@ -201,11 +203,11 @@ void BfsBottomUp2::run(HornetGraph& hornet_in) {
         }
 
     }
+    std::cout << "Number of elements is : " << elements << std::endl;
 
 }
 
 void BfsBottomUp2::release() {
-    gpu::free(d_distances);
     d_distances = nullptr;
 }
 

@@ -50,7 +50,7 @@ int exec(int argc, char* argv[]) {
     page_rank_undir.run();
 
     TM.stop();
-    TM.print("PR---Undirected---PULL");        	
+    TM.print("PR---Undirected---PULL");
 
 
 
@@ -58,15 +58,12 @@ int exec(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
+  int ret = 0;
+  {
 
     ret = exec(argc, argv);
 
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
+  }
 
-    return ret;
+  return ret;
 }
-

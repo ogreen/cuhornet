@@ -40,45 +40,18 @@ int exec(int argc, char* argv[]) {
 
     TM.start();
 
-    /*int* d_row_offsets = const_cast<int*>(graph.csr_out_offsets());
-    int* d_column_indices = const_cast<int*>(graph.csr_out_edges());
-    float* d_values  = (float*) h_value;
-    float* d_vector_x = (float*) h_vector;
-    int num_rows = graph.nV();
-    int num_cols = graph.nV();
-    int num_nonzeros = graph.nE();
-    float* d_vector_y;
-    cuMalloc(d_vector_y, graph.nV());
-
-    void*    d_temp_storage = NULL;
-    size_t   temp_storage_bytes = 0;
-    cub::DeviceSpmv::CsrMV(d_temp_storage, temp_storage_bytes, d_values,
-                           d_row_offsets, d_column_indices, d_vector_x,
-                           d_vector_y, num_rows, num_cols, num_nonzeros);
-
-    cudaMalloc(&d_temp_storage, temp_storage_bytes);
-
-    cub::DeviceSpmv::CsrMV(d_temp_storage, temp_storage_bytes, d_values,
-                           d_row_offsets, d_column_indices, d_vector_x,
-                           d_vector_y, num_rows, num_cols, num_nonzeros);
-    TM.stop();
-    TM.print("Cub SpMV");*/
-
     delete[] h_vector;
     delete[] h_value;
     return is_correct;
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
+  int ret = 0;
+  {
 
     ret = exec(argc, argv);
 
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
+  }
 
-    return ret;
+  return ret;
 }
-

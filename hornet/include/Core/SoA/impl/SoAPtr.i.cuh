@@ -34,7 +34,6 @@
  * </blockquote>}
  */
 
-#include <rmm/rmm.h>
 #include <rmm/thrust_rmm_allocator.h>
 
 using namespace rmm;
@@ -50,21 +49,23 @@ namespace hornet {
 template<int N, int SIZE>
 struct RecursiveFillNull {
   template<typename degree_t, typename... Ts>
-  static void fillNull(SoAPtr<Ts...> ptr, degree_t length) {
-    auto tptr = thrust::device_pointer_cast(ptr.template get<N>());
-    thrust::fill(tptr, tptr + length,
-         static_cast<typename xlib::SelectType<N, Ts...>::type>(0));
-    RecursiveFillNull<N+1, SIZE>::fillNull(ptr, length);
+  static void fillNull(SoAPtr<Ts...> ptr, degree_t length, DeviceType device_t) {
+    if (device_t == DeviceType::DEVICE) {
+      auto tptr = thrust::device_pointer_cast(ptr.template get<N>());
+      thrust::fill(tptr, tptr + length,
+          static_cast<typename xlib::SelectType<N, Ts...>::type>(0));
+    } else {
+      thrust::fill(thrust::host, ptr.template get<N>(), ptr.template get<N>() + length,
+          static_cast<typename xlib::SelectType<N, Ts...>::type>(0));
+    }
+    RecursiveFillNull<N+1, SIZE>::fillNull(ptr, length, device_t);
   }
 };
 
 template<int N>
 struct RecursiveFillNull<N, N> {
   template<typename degree_t, typename... Ts>
-  static void fillNull(SoAPtr<Ts...> ptr, degree_t length) {
-    auto tptr = thrust::device_pointer_cast(ptr.template get<N>());
-    thrust::fill(tptr, tptr + length,
-         static_cast<typename xlib::SelectType<N, Ts...>::type>(0));
+  static void fillNull(SoAPtr<Ts...> ptr, degree_t length, DeviceType device_t) {
   }
 };
 

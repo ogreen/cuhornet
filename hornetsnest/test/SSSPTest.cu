@@ -25,7 +25,7 @@ int exec(int argc, char* argv[]) {
     HornetGraph hornet_graph(hornet_init);
 
     vid_t root = 0;
-    if(argc==3) 
+    if(argc==3)
         root = atoi(argv[2]);
 
     SSSP sssp(hornet_graph);
@@ -42,15 +42,12 @@ int exec(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
+  int ret = 0;
+  {
 
     ret = exec(argc, argv);
 
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
+  }
 
-    return ret;
+  return ret;
 }
-

@@ -38,6 +38,7 @@
 #pragma once
 
 #include "HornetAlg.hpp"
+#include <BufferPool.cuh>
 
 namespace hornets_nest {
 
@@ -48,6 +49,7 @@ using HornetInit  = ::hornet::HornetInit<vid_t>;
 using dist_t = int;
 
 class BfsBottomUp2 : public StaticAlgorithm<HornetGraph> {
+  BufferPool pool;
 public:
     BfsBottomUp2(HornetGraph& hornet, HornetGraph& hornet_in);
     ~BfsBottomUp2();
@@ -62,7 +64,8 @@ public:
 private:
     TwoLevelQueue<vid_t>        queue;
     TwoLevelQueue<vid_t>        queue_inf;
-    load_balancing::BinarySearch load_balancing;
+    // load_balancing::BinarySearch load_balancing;
+    load_balancing::LogarthimRadixBinning32 load_balancing;
 
     dist_t* d_distances   { nullptr };
     vid_t   bfs_source    { 0 };

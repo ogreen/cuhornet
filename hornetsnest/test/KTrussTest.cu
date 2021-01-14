@@ -55,7 +55,7 @@ int exec(int argc, char* argv[]) {
 
 	  cudaSetDevice(0);
     GraphStd<vert_t, vert_t> graph(UNDIRECTED);
-    
+
     graph.read(argv[1], SORT | PRINT_INFO );
 
     HornetInit hornet_init(graph.nV(), graph.nE(),
@@ -68,7 +68,7 @@ int exec(int argc, char* argv[]) {
 
     gpu::allocate(gpuOffset, graph.nV()+1);
     cudaMemcpy(gpuOffset,graph.csr_out_offsets(),sizeof(vert_t)*(graph.nV()+1), cudaMemcpyHostToDevice);
-    
+
     // int temp;
 
     // int temp2=scanf("%d",&temp);
@@ -82,7 +82,7 @@ int exec(int argc, char* argv[]) {
     // ktruss.setInitParameters(1, 32, 0, 64000, 32);
     // ktruss.createOffSetArray();
     ktruss.setInitParameters(4, 8, 2, 64000, 32);
- 
+
     Timer<DEVICE> TM;
     ktruss.reset();
     TM.start();
@@ -99,19 +99,12 @@ int exec(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-// #if defined(RMM_WRAPPER)
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-// #endif
+  int ret = 0;
+  {
 
     ret = exec(argc, argv);
 
-// #if defined(RMM_WRAPPER)
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
-// #endif
+  }
 
-    return ret;
+  return ret;
 }
-

@@ -42,22 +42,12 @@
 namespace hornets_nest {
 namespace gpu {
 
-__forceinline__
-void initializeRMMPoolAllocation(const size_t initPoolSize=0, int numGPUs=1);//if initial pool size is set to 0, RMM currently assigns half the device memory
-
-__forceinline__
-void finalizeRMMPoolAllocation(int numGPUs=1);
-
 template<typename T>
 void allocate(T*& pointer, size_t num_items);
 
 template<typename T>
 typename std::enable_if<std::is_pointer<T>::value>::type
-free(T& pointer);
-
-template<typename T, typename... TArgs>
-typename std::enable_if<std::is_pointer<T>::value>::type
-free(T& pointer, TArgs*... pointers);
+free(T& pointer, size_t num_items);
 
 template<typename T>
 void copyToDevice(const T* device_input, size_t num_items, T* device_output);

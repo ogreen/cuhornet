@@ -38,15 +38,15 @@ int exec(int argc, char* argv[]) {
 
     BfsBottomUp2 bfs_bottom_up(hornet_graph, hornet_graph_inv);
     BfsBottomUp2 bfs_top_down(hornet_graph, hornet_graph_inv);
- 
+
 	vid_t root = graph.max_out_degree_id();
 	if (argc==3)
 	  root = atoi(argv[2]);
 
     bfs_bottom_up.set_parameters(root);
     bfs_top_down.set_parameters(root);
-    
- 
+
+
     Timer<DEVICE> TM;
     cudaProfilerStart();
     TM.start();
@@ -64,15 +64,12 @@ int exec(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
+  int ret = 0;
+  {
 
     ret = exec(argc, argv);
 
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
+  }
 
-    return ret;
+  return ret;
 }
-

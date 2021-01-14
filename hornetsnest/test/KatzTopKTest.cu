@@ -54,7 +54,7 @@ int exec(int argc, char* argv[]) {
 
 	  cudaSetDevice(0);
     GraphStd<vert_t, vert_t> graph(UNDIRECTED);
-    
+
     graph.read(argv[1], SORT | PRINT_INFO);
 
     HornetInit hornet_init(graph.nV(), graph.nE(), graph.csr_out_offsets(), graph.csr_out_edges());
@@ -64,7 +64,7 @@ int exec(int argc, char* argv[]) {
 	  int topK = graph.nV();
      if(argc>2)
         topK=atoi(argv[2]);
- 
+
     // Finding largest vertex degreemake
     degree_t max_degree_vertex = hornet_graph.max_degree();
     std::cout << "Max degree vextex is " << max_degree_vertex << std::endl;
@@ -83,7 +83,7 @@ int exec(int argc, char* argv[]) {
     auto total_time = TM.duration();
     std::cout << "The number of iterations     : "
               << kcPostUpdate.get_iteration_count()
-              << "\nTopK                       : " << topK 
+              << "\nTopK                       : " << topK
               << "\nTotal time for KC          : " << total_time
               << "\nAverage time per iteartion : "
               << total_time /
@@ -94,19 +94,16 @@ int exec(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
+  int ret = 0;
+  {
 
-      for(int i=0; i<10; i++){
-          ret = exec<hornets_nest::HornetDynamicGraph,hornets_nest::KatzCentralityTopKDynamicH>(argc, argv);
-          ret = exec<hornets_nest::HornetStaticGraph,hornets_nest::KatzCentralityTopKStatic>(argc, argv);
-        
-      }
+    for(int i=0; i<10; i++){
+      ret = exec<hornets_nest::HornetDynamicGraph,hornets_nest::KatzCentralityTopKDynamicH>(argc, argv);
+      ret = exec<hornets_nest::HornetStaticGraph,hornets_nest::KatzCentralityTopKStatic>(argc, argv);
 
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
+    }
 
-    return ret;
+  }
+
+  return ret;
 }
-

@@ -11,7 +11,7 @@
 using namespace timer;
 using namespace hornets_nest;
 
-int main(int argc, char **argv) {
+int exec(int argc, char **argv) {
     using namespace graph::structure_prop;
     using namespace graph::parsing_prop;
 
@@ -25,6 +25,17 @@ int main(int argc, char **argv) {
     thrust::device_vector<int> core_number(graph.nV());
     CoreNumberStatic kcore(hornet_graph, core_number.data().get());
     kcore.run();
-    thrust::copy(core_number.begin(), core_number.end(), std::ostream_iterator<int>(std::cout, "\n"));
 
+    return 0;
+}
+
+int main(int argc, char* argv[]) {
+  int ret = 0;
+  {
+
+    ret = exec(argc, argv);
+
+  }
+
+  return ret;
 }

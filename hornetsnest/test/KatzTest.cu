@@ -56,7 +56,7 @@ int exec(int argc, char* argv[]) {
     GraphStd<vert_t, vert_t> graph(UNDIRECTED);
 
     HornetInit* hornet_init;
-    
+
     if(argc>1){
       graph.read(argv[1], SORT | PRINT_INFO);
       hornet_init = new HornetInit(graph.nV(), graph.nE(), graph.csr_out_offsets(), graph.csr_out_edges());
@@ -97,8 +97,8 @@ int exec(int argc, char* argv[]) {
 
 
     // Katz kcStatIc(hornet_graph, max_iterations, max_degree_vertex);
-    float alpha = 1.0/(max_degree_vertex+1.0); 
-    Katz kcStatIc(hornet_graph, max_iterations,alpha,true);
+    float alpha = 1.0/(max_degree_vertex+1.0);
+    Katz kcStatIc(hornet_graph, alpha, max_iterations);
 
 
     Timer<DEVICE> TM;
@@ -134,19 +134,10 @@ int exec(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = 0;
-    hornets_nest::gpu::initializeRMMPoolAllocation();//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-    {//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
+  int ret = 0;
+  {
+    ret = exec<hornets_nest::HornetStaticGraph,hornets_nest::KatzCentralityStatic>(argc, argv);
+  }
 
-      for(int i=0; i<1; i++){
-          // ret = exec<hornets_nest::HornetDynamicGraph,hornets_nest::KatzCentralityDynamicH>(argc, argv);
-          ret = exec<hornets_nest::HornetStaticGraph,hornets_nest::KatzCentralityStatic>(argc, argv);
-
-      }
-
-    }//scoping technique to make sure that hornets_nest::gpu::finalizeRMMPoolAllocation is called after freeing all RMM allocations.
-    hornets_nest::gpu::finalizeRMMPoolAllocation();
-
-    return ret;
+  return ret;
 }
-
