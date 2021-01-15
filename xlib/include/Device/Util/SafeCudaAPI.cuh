@@ -71,7 +71,8 @@
 #if !defined(NO_CHECK_CUDA_ERROR)
     #define CHECK_CUDA_ERROR                                                   \
         {                                                                      \
-		  /*cudaStreamSynchronize(0);*/											   \
+            cudaDeviceSynchronize();                                           \
+            xlib::detail::getLastCudaError(__FILE__, __LINE__, __func__);      \
         }
 #else
     #define CHECK_CUDA_ERROR
@@ -177,16 +178,6 @@ void cuGetSymbolAddressAux(const char* file, int line, const char* func_name,
     std::atexit(reinterpret_cast<void(*)()>(cudaDeviceReset));                              \
     std::exit(EXIT_FAILURE);                                                                \
 } while (0)
-
-template<typename T>
-void cuMallocAux(const char* file, int line, const char* func_name,
-                 T*& ptr, size_t num_items) noexcept {
-    assert(num_items > 0);
-    auto result = RMM_ALLOC(&ptr, num_items * (size_t)(sizeof(T)), 0);//by default, use the default stream
-    if (result != RMM_SUCCESS) {
-        RMM_ERROR_HANDLER("cuMalloc", "rmmAlloc", result);
-    }
-}
 
 //------------------------------------------------------------------------------
 template<typename T>

@@ -68,14 +68,13 @@ endforeach()
 list(GET GPU_ARCHS -1 ptx)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode arch=compute_${ptx},code=compute_${ptx}")
 
-# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda --expt-relaxed-constexpr")
 
 # set warnings as errors
 if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall -Wno-reorder -Wno-error=deprecated-declarations")
 endif(CMAKE_COMPILER_IS_GNUCXX)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Werror cross-execution-space-call --default-stream legacy -Xcompiler -Wall,-Werror,-Wno-reorder,-Wno-error=deprecated-declarations")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Werror cross-execution-space-call -Xcompiler -Wall,-Werror,-Wno-reorder,-Wno-error=deprecated-declarations")
 
 # set default build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -93,7 +92,6 @@ endif()
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
-    set(OpenMP_C_FLAGS "-fopenmp")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=${OpenMP_CXX_FLAGS}")
@@ -151,3 +149,4 @@ endif(CMAKE_BUILD_TYPE MATCHES Debug)
 
 ###################################################################################################
 # - custom targets --------------------------------------------------------------------------------
+

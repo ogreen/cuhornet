@@ -129,14 +129,13 @@ inline void GraphBase<vid_t, eoff_t>
 
 template<typename vid_t, typename eoff_t>
 void GraphBase<vid_t, eoff_t>::read(const char* filename,               //NOLINT
-                                    const ParsingProp& prop,            //NOLINT
-                                    bool returnCOO) {
+                                    const ParsingProp& prop) {          //NOLINT
     xlib::check_regular_file(filename);
     size_t size = xlib::file_size(filename);
     _graph_name = xlib::extract_filename(filename);
     _prop       = prop;
 
-    if (0 && prop.is_print()) {
+    if (prop.is_print()) {
         std::cout << "\nGraph File: " << std::setw(12) << std::left
                   << _graph_name << "       Size: " << std::setw(12)
                   << xlib::format(size / xlib::MB) + " MB"
@@ -167,10 +166,9 @@ void GraphBase<vid_t, eoff_t>::read(const char* filename,               //NOLINT
     fin.seekg(std::ios::beg);
 
     if (file_ext == ".mtx" && first_str == "%%MatrixMarket") {
-        if (0 && prop.is_print())
+        if (prop.is_print())
             std::cout << "(Market)\n";
-        // readMarket(fin, prop.is_print());
-        readMarket(fin, false);
+        readMarket(fin, prop.is_print());
     }
     else if (file_ext == ".mm") {
         if (prop.is_print())
@@ -190,8 +188,7 @@ void GraphBase<vid_t, eoff_t>::read(const char* filename,               //NOLINT
     else if (file_ext == ".txt" && first_str == "#") {
         if (prop.is_print())
             std::cout << "(SNAP)\n";
-        // readSnap(fin, prop.is_print());
-        readSnap(fin, false);
+        readSnap(fin, prop.is_print());
     }
     else if (file_ext == ".edges") {
         if (prop.is_print())
@@ -205,9 +202,7 @@ void GraphBase<vid_t, eoff_t>::read(const char* filename,               //NOLINT
     } else
         ERROR("Graph type not recognized");
     fin.close();
-    if (!returnCOO){
-        COOtoCSR();
-    }
+    COOtoCSR();
 }
 
 //==============================================================================
