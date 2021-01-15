@@ -10,6 +10,7 @@
 #include "../Hornet.cuh"
 #include <map>
 
+#include <rmm/rmm.h>
 #include <rmm/thrust_rmm_allocator.h>
 
 using namespace rmm;

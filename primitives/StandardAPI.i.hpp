@@ -41,23 +41,82 @@
 #include <Device/Util/SafeCudaAPI.cuh>
 #include <Device/Util/SafeCudaAPIAsync.cuh>
 #include <Device/Primitives/CubWrapper.cuh>
+#include <rmm/rmm.h>
 #include <omp.h>
 #include <cstring>
-#include <rmm/mr/device/per_device_resource.hpp>
 
 namespace hornets_nest {
 namespace gpu {
 
+//it may be better to move this inside a cpp file (similar to xlib::detail::cudaErrorHandler) if there is an appropriate place.
+#define RMM_ERROR_HANDLER(caller_name, callee_name, result) do {                                                   \
+    std::cerr << xlib::Color::FG_RED << "\nRMM error\n" << xlib::Color::FG_DEFAULT          \
+        << xlib::Emph::SET_UNDERLINE << __FILE__                                            \
+        << xlib::Emph::SET_RESET  << "(" << __LINE__ << ")"                                 \
+        << " [ "                                                                            \
+        << xlib::Color::FG_L_CYAN << (caller_name) << xlib::Color::FG_DEFAULT \
+        << " ] : " << callee_name                                                              \
+        << " -> " << rmmGetErrorString(result)                                              \
+        << "(" << static_cast<int>(result) << ")\n";                                        \
+    assert(false);                                                                          \
+    std::atexit(reinterpret_cast<void(*)()>(cudaDeviceReset));                              \
+    std::exit(EXIT_FAILURE);                                                                \
+} while (0)
+
+void initializeRMMPoolAllocation(const size_t initPoolSize, int numGPUs) {
+    rmmOptions_t options;
+    if(initPoolSize==0){
+        options.allocation_mode = CudaDefaultAllocation; 
+    }else{
+        options.allocation_mode = PoolAllocation;
+        options.initial_pool_size = initPoolSize;
+    }
+
+    for(int i=0; i<numGPUs; i++){
+        cudaSetDevice(i);
+        auto result = rmmInitialize(&options);
+        if (result != RMM_SUCCESS) {
+            RMM_ERROR_HANDLER("hornets_nest::gpu::initializeRMMPoolAllocation", "rmmInitialize", result);
+        }
+    }
+    cudaSetDevice(0);
+}
+
+
+void finalizeRMMPoolAllocation(int numGPUs) {
+
+    for(int i=0; i<numGPUs; i++){
+        cudaSetDevice(i);
+        auto result = rmmFinalize();
+        if (result != RMM_SUCCESS) {
+            RMM_ERROR_HANDLER("hornets_nest::gpu::finalizeRMMPoolAllocation", "rmmFinalize", result);
+        }
+    }
+    cudaSetDevice(0);
+}
+
 template<typename T>
 void allocate(T*& pointer, size_t num_items) {
-    pointer = static_cast<T*>(
-        rmm::mr::get_current_device_resource()->allocate(sizeof(T)*num_items, 0));
+    auto result = RMM_ALLOC(&pointer, num_items * sizeof(T), 0);//by default, use the default stream
+    if (result != RMM_SUCCESS) {
+        RMM_ERROR_HANDLER("hornets_nest::gpu::allocate", "rmmAlloc", result);
+    }
 }
 
 template<typename T>
 typename std::enable_if<std::is_pointer<T>::value>::type
-free(T& pointer, size_t num_items) {
-    rmm::mr::get_current_device_resource()->deallocate(static_cast<void*>(pointer), sizeof(T)*num_items, 0);
+free(T& pointer) {
+    auto result = RMM_FREE(pointer, 0);//by default, use the default stream
+    if (result != RMM_SUCCESS) {
+        RMM_ERROR_HANDLER("hornets_nest::gpu::free", "rmmFree", result);
+    }
+}
+
+template<typename T, typename... TArgs>
+typename std::enable_if<std::is_pointer<T>::value>::type
+free(T& pointer, TArgs*... pointers) {
+    hornets_nest::gpu::free(pointer);
+    hornets_nest::gpu::free(pointers...);
 }
 
 template<typename T>
@@ -108,6 +167,12 @@ void memsetZero(T* pointer, size_t num_items) {
 template<typename T>
 void memsetOne(T* pointer, size_t num_items) {
     cuMemset0xFF(pointer, num_items);
+}
+
+template<typename T>
+T reduce(const T* input, size_t num_items) {
+    xlib::CubReduce<T> cub_reduce(input, num_items);
+    return cub_reduce.run();
 }
 
 template<typename T>

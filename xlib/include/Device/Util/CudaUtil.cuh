@@ -54,6 +54,16 @@ struct numeric_limits {         // available in CUDA kernels
 
 //------------------------------------------------------------------------------
 
+template<int SIZE>
+struct CuFreeAtExit {
+    template<typename... TArgs>
+    explicit CuFreeAtExit(TArgs... args) noexcept;
+
+    ~CuFreeAtExit() noexcept;
+private:
+    const std::array<void*, SIZE> _tmp;
+};
+
 void device_info(int device_id = 0);
 
 } // namespace xlib
@@ -71,3 +81,5 @@ void push_range(const std::string& event_name, NvColor color) noexcept;
 void pop_range() noexcept;
 
 } // namespace nvtx
+
+#include "impl/CudaUtil.i.cuh"

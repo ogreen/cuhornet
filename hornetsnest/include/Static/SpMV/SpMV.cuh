@@ -39,7 +39,6 @@
 #pragma once
 
 #include "HornetAlg.hpp"
-#include <BufferPool.cuh>
 
 namespace hornets_nest {
 
@@ -49,7 +48,6 @@ using HornetGraph = ::hornet::gpu::Hornet<vid_t, EMPTY, TypeList<weight_t>>;
 using HornetInit  = ::hornet::HornetInit<vid_t, EMPTY, TypeList<weight_t>>;
 
 class SpMV : public StaticAlgorithm<HornetGraph> {
-  BufferPool pool;
 public:
     SpMV(HornetGraph& hornet, int* h_vector);
     ~SpMV();

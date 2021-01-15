@@ -468,9 +468,7 @@ void forAllAdjUnions(HornetClass&          hornet,
         forAllEdgesAdjUnionImbalanced(hornet, hd_queue_info().d_edge_queue, start_index, end_index, op, threads_per, 1);
     }
 
-    hornets_nest::gpu::free(hd_queue_info().d_queue_pos, MAX_ADJ_UNIONS_BINS+1);
-    hornets_nest::gpu::free(hd_queue_info().d_queue_sizes, MAX_ADJ_UNIONS_BINS);
-    hornets_nest::gpu::free(hd_queue_info().d_edge_queue, 2*hornet.nE());
+    hornets_nest::gpu::free(hd_queue_info().d_queue_pos, hd_queue_info().d_queue_sizes, hd_queue_info().d_edge_queue);
 
     free(queue_sizes);
     free(queue_pos);

@@ -162,12 +162,13 @@ void TriangleCounting2::run(const int WORK_FACTOR=1){
 
 void TriangleCounting2::release(){
     //printf("Inside release\n");
+    gpu::free(triPerVertex);
     triPerVertex = nullptr;
 }
 
 void TriangleCounting2::init(){
     //printf("Inside init. Printing hornet.nV(): %d\n", hornet.nV());
-    pool.allocate(&triPerVertex, hornet.nV());
+    gpu::allocate(triPerVertex, hornet.nV());
     reset();
 }
 

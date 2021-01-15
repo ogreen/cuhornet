@@ -29,7 +29,6 @@
 #pragma once
 
 #include "HornetAlg.hpp"
-#include <BufferPool.cuh>
 
 namespace hornets_nest {
 
@@ -86,7 +85,6 @@ struct KTrussData {
 
 // Label propogation is based on the values from the previous iteration.
 class KTruss : public StaticAlgorithm<HornetGraph> {
-  BufferPool pool;
 public:
     KTruss(HornetGraph& hornet);
     ~KTruss();
@@ -126,7 +124,6 @@ private:
 
 template <typename T>
 class KTrussWeighted : public StaticAlgorithm<HornetGraphWeighted<T>> {
-  BufferPool pool;
 public:
     KTrussWeighted(HornetGraphWeighted<T>& hornet);
     ~KTrussWeighted();

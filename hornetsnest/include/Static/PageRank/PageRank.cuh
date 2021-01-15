@@ -39,7 +39,6 @@
 #pragma once
 
 #include "HornetAlg.hpp"
-#include <BufferPool.cuh>
 
 namespace hornets_nest {
 
@@ -67,7 +66,6 @@ struct PrData {
 
 // Label propogation is based on the values from the previous iteration.
 class StaticPageRank : public StaticAlgorithm<HornetGraph> {
-  BufferPool pool;
 public:
     StaticPageRank(HornetGraph& hornet,
 	            	int  iteration_max = 20,

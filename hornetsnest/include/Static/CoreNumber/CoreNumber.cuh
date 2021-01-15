@@ -21,7 +21,6 @@
 #include <utility>
 #include <algorithm>
 #include <thrust/functional.h>
-#include <BufferPool.cuh>
 
 
 namespace hornets_nest {
@@ -46,7 +45,6 @@ public:
     void set_hcopy(HornetGraph *h_copy);
 
 private:
-    BufferPool pool;
     long edge_vertex_count;
 
     load_balancing::BinarySearch load_balancing;
@@ -76,12 +74,14 @@ CORENUMBER::CoreNumber(HornetGraph &hornet, int *core_number_ptr) :
                         core_number(core_number_ptr)
                         {
 
-    pool.allocate(&vertex_pres, hornet.nV());
-    pool.allocate(&vertex_deg, hornet.nV());
+    gpu::allocate(vertex_pres, hornet.nV());
+    gpu::allocate(vertex_deg, hornet.nV());
 }
 
 template <typename HornetGraph>
 CORENUMBER::~CoreNumber() {
+    gpu::free(vertex_pres);
+    gpu::free(vertex_deg);
 }
 
 struct ActiveVertices {
@@ -178,5 +178,7 @@ void CORENUMBER::run() {
 
 template <typename HornetGraph>
 void CORENUMBER::release() {
+    gpu::free(vertex_pres);
+    gpu::free(vertex_deg);
 }
 }

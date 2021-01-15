@@ -44,6 +44,7 @@ StaticAlgorithm<HornetClass>::StaticAlgorithm(HornetClass& hornet) noexcept :
 
 template<typename HornetClass>
 StaticAlgorithm<HornetClass>::~StaticAlgorithm() noexcept {
+    gpu::free(_d_ptr);
 }
 
 } // namespace hornets_nest

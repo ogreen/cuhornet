@@ -39,7 +39,6 @@
 #pragma once
 
 #include "HornetAlg.hpp"
-#include <BufferPool.cuh>
 
 namespace hornets_nest {
 
@@ -52,7 +51,6 @@ using HornetInit  = ::hornet::HornetInit<vid_t>;
 using color_t = int;
 
 class CC : public StaticAlgorithm<HornetGraph> {
-  BufferPool pool;
 public:
     explicit CC(HornetGraph& hornet);
     ~CC();

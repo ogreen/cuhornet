@@ -1,5 +1,6 @@
 #include "../SoA/SoAData.cuh"
 
+#include <rmm/rmm.h>
 #include <rmm/thrust_rmm_allocator.h>
 
 using namespace rmm;

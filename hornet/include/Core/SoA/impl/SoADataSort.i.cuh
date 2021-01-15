@@ -1,8 +1,4 @@
-#ifndef SOA_DATA_SORT_CUH
-#define SOA_DATA_SORT_CUH
-
 #include <cub/cub.cuh>
-#include <rmm/device_buffer.hpp>
 
 namespace hornet {
 
@@ -42,12 +38,12 @@ __device__ void bubble_sort(int32_t size, T0 *key, T1 *val){
   }
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 __launch_bounds__ (32)
 __global__
 typename std::enable_if<(2 < sizeof...(EdgeTypes)), void>::type
 small_segmented_sort_kernel(
-    CSoAPtr<EdgeTypes...> edges,
+    Ptr<EdgeTypes...> edges,
     degree_t * global_index,
     const degree_t nE,
     const degree_t segment_length) {
@@ -69,12 +65,12 @@ small_segmented_sort_kernel(
   }
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 __launch_bounds__ (32)
 __global__
 typename std::enable_if<(2 == sizeof...(EdgeTypes)), void>::type
 small_segmented_sort_kernel(
-    CSoAPtr<EdgeTypes...> edges,
+    Ptr<EdgeTypes...> edges,
     const degree_t nE,
     const degree_t segment_length) {
   int i = threadIdx.x+blockIdx.x*blockDim.x;
@@ -95,12 +91,12 @@ small_segmented_sort_kernel(
   }
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 __launch_bounds__ (32)
 __global__
 typename std::enable_if<(1 == sizeof...(EdgeTypes)), void>::type
 small_segmented_sort_kernel(
-    CSoAPtr<EdgeTypes...> edges,
+    Ptr<EdgeTypes...> edges,
     const degree_t nE,
     const degree_t segment_length) {
   int i = threadIdx.x+blockIdx.x*blockDim.x;
@@ -118,28 +114,26 @@ small_segmented_sort_kernel(
   }
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(2 >= sizeof...(EdgeTypes)), void>::type
-small_segmented_sort(CSoAPtr<EdgeTypes...> soa, degree_t capacity, degree_t segment_length) {
+small_segmented_sort(Ptr<EdgeTypes...> soa, degree_t capacity, degree_t segment_length) {
   detail::small_segmented_sort_kernel<<<capacity/(32*segment_length), 32>>>(soa, capacity, segment_length);
   CHECK_CUDA_ERROR
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(2 < sizeof...(EdgeTypes)), void>::type
-small_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
+small_segmented_sort(Ptr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
   rmm::device_vector<degree_t> index(capacity);
-
-  CSoAData<TypeList<EdgeTypes...>, DeviceType::DEVICE> temp_data(capacity);
-  temp_data.copy(soa, DeviceType::DEVICE, capacity);
-  CSoAPtr<EdgeTypes...> temp_soa = temp_data.get_soa_ptr();
-
+  Ptr<EdgeTypes...> temp_soa(allocate<DeviceType::DEVICE>(xlib::SizeSum<EdgeTypes...>::value * capacity), capacity);
+  RecursiveCopy<0, sizeof...(EdgeTypes) - 1>::copy(soa, DeviceType::DEVICE, temp_soa, DeviceType::DEVICE, capacity);
   detail::small_segmented_sort_kernel<<<capacity/(32*segment_length), 32>>>(temp_soa,
       index.data().get(),
       capacity, segment_length);
   //TODO : Check correctness
   RecursiveCopy<0, 0>::copy(temp_soa, DeviceType::DEVICE, soa, DeviceType::DEVICE, capacity);
   RecursiveGather<1, sizeof...(EdgeTypes)>::assign(temp_soa, soa, index, capacity);
+  deallocate<DeviceType::DEVICE>(reinterpret_cast<xlib::byte_t*>(temp_soa.template get<0>()));
 }
 
 template <
@@ -224,9 +218,9 @@ __launch_bounds__ (BLOCK_THREADS)
     StoreDirectStriped<BLOCK_THREADS>(threadIdx.x, edge_vals + block_offset, val);
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(1 == sizeof...(EdgeTypes)), void>::type
-cub_block_segmented_sort(CSoAPtr<EdgeTypes...> soa, degree_t capacity, degree_t segment_length) {
+cub_block_segmented_sort(Ptr<EdgeTypes...> soa, degree_t capacity, degree_t segment_length) {
   using T = typename xlib::SelectType<0, EdgeTypes...>::type;
   T * edges = soa.template get<0>();
   int blocks = capacity/segment_length;
@@ -240,9 +234,9 @@ cub_block_segmented_sort(CSoAPtr<EdgeTypes...> soa, degree_t capacity, degree_t 
   if (segment_length == 4096) CubBlockSortKernel<T,256,16><<<blocks,256>>>(edges);
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(2 == sizeof...(EdgeTypes)), void>::type
-cub_block_segmented_sort(CSoAPtr<EdgeTypes...> soa, degree_t capacity, degree_t segment_length) {
+cub_block_segmented_sort(Ptr<EdgeTypes...> soa, degree_t capacity, degree_t segment_length) {
   using T0 = typename xlib::SelectType<0, EdgeTypes...>::type;
   T0 * key = soa.template get<0>();
   using T1 = typename xlib::SelectType<1, EdgeTypes...>::type;
@@ -258,12 +252,11 @@ cub_block_segmented_sort(CSoAPtr<EdgeTypes...> soa, degree_t capacity, degree_t 
   if (segment_length == 4096) CubBlockSortKernel<T0,T1,256,16><<<blocks,256>>>(key, val);
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(2 < sizeof...(EdgeTypes)), void>::type
-cub_block_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
-  CSoAData<TypeList<EdgeTypes...>, DeviceType::DEVICE> temp_data(capacity);
-  temp_data.copy(soa, DeviceType::DEVICE, capacity);
-  CSoAPtr<EdgeTypes...> temp_soa = temp_data.get_soa_ptr();
+cub_block_segmented_sort(Ptr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
+  Ptr<EdgeTypes...> temp_soa(allocate<DeviceType::DEVICE>(xlib::SizeSum<EdgeTypes...>::value * capacity), capacity);
+  RecursiveCopy<0, sizeof...(EdgeTypes) - 1>::copy(soa, DeviceType::DEVICE, temp_soa, DeviceType::DEVICE, capacity);
 
   cudaStream_t stream{nullptr};
   rmm::device_vector<degree_t> index(capacity);
@@ -283,50 +276,51 @@ cub_block_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t
   if (segment_length == 4096) CubBlockSortKernel<T0,T1,256,16><<<blocks,256>>>(key, val);
   RecursiveCopy<0, 0>::copy(temp_soa, DeviceType::DEVICE, soa, DeviceType::DEVICE, capacity);
   RecursiveGather<1, sizeof...(EdgeTypes)>::assign(temp_soa, soa, index, capacity);
+  deallocate<DeviceType::DEVICE>(reinterpret_cast<xlib::byte_t*>(temp_soa.template get<0>()));
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(1 == sizeof...(EdgeTypes)), void>::type
-cub_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
-  CSoAData<TypeList<EdgeTypes...>, DeviceType::DEVICE> temp_data(capacity);
-  temp_data.copy(soa, DeviceType::DEVICE, capacity);
-  CSoAPtr<EdgeTypes...> temp_soa = temp_data.get_soa_ptr();
-
+cub_segmented_sort(Ptr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
   cudaStream_t stream{nullptr};
+
+  Ptr<EdgeTypes...> temp_soa(allocate<DeviceType::DEVICE>(xlib::SizeSum<EdgeTypes...>::value * capacity), capacity);
+  RecursiveCopy<0, sizeof...(EdgeTypes) - 1>::copy(soa, DeviceType::DEVICE, temp_soa, DeviceType::DEVICE, capacity);
+
   using T = typename xlib::SelectType<0, EdgeTypes...>::type;
   T * in_edges  = temp_soa.template get<0>();
   T * out_edges = soa.template get<0>();
 
   degree_t offset_count = capacity/segment_length;
-  if(offset_count==0)
-    return;
-    rmm::device_vector<degree_t> offsets(offset_count + 1);
-    thrust::sequence(rmm::exec_policy(stream)->on(stream), offsets.data(), offsets.data()+offset_count+1);
-    // rmm::device_vector<degree_t> offsets2(offset_count + 1);
-    thrust::transform(rmm::exec_policy(stream)->on(stream),
+  rmm::device_vector<degree_t> offsets(offset_count + 1);
+  thrust::transform(rmm::exec_policy(stream)->on(stream),
       offsets.begin(), offsets.end(),
       thrust::make_constant_iterator(segment_length),
       offsets.begin(),
       thrust::multiplies<degree_t>());
 
+  void* tempStorage = NULL;
   size_t tempStorageBytes = 0;
 
   cub::DeviceSegmentedRadixSort::SortKeys(
-      NULL, tempStorageBytes, in_edges, out_edges, capacity,
+      tempStorage, tempStorageBytes, in_edges, out_edges, capacity,
       offsets.size() - 1, offsets.data().get(), offsets.data().get() + 1);
-  rmm::device_buffer tempStorage(tempStorageBytes);
+  RMM_ALLOC(&tempStorage, tempStorageBytes, stream);
   cub::DeviceSegmentedRadixSort::SortKeys(
-      tempStorage.data(), tempStorageBytes, in_edges, out_edges, capacity,
+      tempStorage, tempStorageBytes, in_edges, out_edges, capacity,
       offsets.size() - 1, offsets.data().get(), offsets.data().get() + 1);
+  RMM_FREE(tempStorage, stream);
+
+  deallocate<DeviceType::DEVICE>(reinterpret_cast<xlib::byte_t*>(temp_soa.template get<0>()));
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(2 == sizeof...(EdgeTypes)), void>::type
-cub_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
-  CSoAData<TypeList<EdgeTypes...>, DeviceType::DEVICE> temp_data(capacity);
-  temp_data.copy(soa, DeviceType::DEVICE, capacity);
-  CSoAPtr<EdgeTypes...> temp_soa = temp_data.get_soa_ptr();
+cub_segmented_sort(Ptr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
   cudaStream_t stream{nullptr};
+
+  Ptr<EdgeTypes...> temp_soa(allocate<DeviceType::DEVICE>(xlib::SizeSum<EdgeTypes...>::value * capacity), capacity);
+  RecursiveCopy<0, sizeof...(EdgeTypes) - 1>::copy(soa, DeviceType::DEVICE, temp_soa, DeviceType::DEVICE, capacity);
 
   using T0 = typename xlib::SelectType<0, EdgeTypes...>::type;
   using T1 = typename xlib::SelectType<1, EdgeTypes...>::type;
@@ -343,24 +337,28 @@ cub_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segme
       offsets.begin(),
       thrust::multiplies<degree_t>());
 
+  void* tempStorage = NULL;
   size_t tempStorageBytes = 0;
 
   cub::DeviceSegmentedRadixSort::SortPairs(
-      NULL, tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
+      tempStorage, tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
       offsets.size() - 1, offsets.data().get(), offsets.data().get() + 1);
-  rmm::device_buffer tempStorage(tempStorageBytes);
+  RMM_ALLOC(&tempStorage, tempStorageBytes, stream);
   cub::DeviceSegmentedRadixSort::SortPairs(
-      tempStorage.data(), tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
+      tempStorage, tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
       offsets.size() - 1, offsets.data().get(), offsets.data().get() + 1);
+  RMM_FREE(tempStorage, stream);
+
+  deallocate<DeviceType::DEVICE>(reinterpret_cast<xlib::byte_t*>(temp_soa.template get<0>()));
 }
 
-template <typename degree_t, typename... EdgeTypes>
+template <template <typename...> typename Ptr, typename degree_t, typename... EdgeTypes>
 typename std::enable_if<(2 < sizeof...(EdgeTypes)), void>::type
-cub_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
-  CSoAData<TypeList<EdgeTypes...>, DeviceType::DEVICE> temp_data(capacity);
-  temp_data.copy(soa, DeviceType::DEVICE, capacity);
-  CSoAPtr<EdgeTypes...> temp_soa = temp_data.get_soa_ptr();
+cub_segmented_sort(Ptr<EdgeTypes...> &soa, degree_t capacity, degree_t segment_length) {
   cudaStream_t stream{nullptr};
+
+  Ptr<EdgeTypes...> temp_soa(allocate<DeviceType::DEVICE>(xlib::SizeSum<EdgeTypes...>::value * capacity), capacity);
+  RecursiveCopy<0, sizeof...(EdgeTypes) - 1>::copy(soa, DeviceType::DEVICE, temp_soa, DeviceType::DEVICE, capacity);
 
   rmm::device_vector<degree_t> index(capacity);
   rmm::device_vector<degree_t> out_index(capacity);
@@ -381,17 +379,20 @@ cub_segmented_sort(CSoAPtr<EdgeTypes...> &soa, degree_t capacity, degree_t segme
       offsets.begin(),
       thrust::multiplies<degree_t>());
 
+  void* tempStorage = NULL;
   size_t tempStorageBytes = 0;
 
   cub::DeviceSegmentedRadixSort::SortPairs(
-      NULL, tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
+      tempStorage, tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
       offsets.size() - 1, offsets.data().get(), offsets.data().get() + 1);
-  rmm::device_buffer tempStorage(tempStorageBytes);
+  RMM_ALLOC(&tempStorage, tempStorageBytes, stream);
   cub::DeviceSegmentedRadixSort::SortPairs(
-      tempStorage.data(), tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
+      tempStorage, tempStorageBytes, in_key, out_key, in_val, out_val, capacity,
       offsets.size() - 1, offsets.data().get(), offsets.data().get() + 1);
+  RMM_FREE(tempStorage, stream);
 
   RecursiveGather<1, sizeof...(EdgeTypes)>::assign(temp_soa, soa, out_index, capacity);
+  deallocate<DeviceType::DEVICE>(reinterpret_cast<xlib::byte_t*>(temp_soa.template get<0>()));
 }
 
 }//namespace detail
@@ -413,4 +414,3 @@ segmented_sort(int segment_length_log2) {
 }
 
 }//namespace hornet
-#endif

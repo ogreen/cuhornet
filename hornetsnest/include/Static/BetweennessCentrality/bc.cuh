@@ -40,7 +40,6 @@
 #pragma once
 
 #include "HornetAlg.hpp"
-#include <BufferPool.cuh>
 
 
 namespace hornets_nest {
@@ -57,15 +56,12 @@ struct BCData {
     paths_t *sigma;
     bc_t *delta;
     bc_t *bc;
-    vid_t* depArray;
     vid_t root;
     degree_t currLevel;
     TwoLevelQueue<vid_t> queue;
-
 };
 
 class BCCentrality : public StaticAlgorithm<HornetGraph> {
-  BufferPool pool;
 public:
     BCCentrality(HornetGraph& hornet);
 
