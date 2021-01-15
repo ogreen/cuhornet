@@ -53,7 +53,7 @@ namespace hornets_nest {
 /**
  * @brief Block size for all kernels associated to operators
  */
-const int BLOCK_SIZE_OP2 = 256;
+const int BLOCK_SIZE_OP2 = 512;
 
 #define OPERATOR template<typename Vertex = void, typename Edge = void>        \
                  __device__ __forceinline__                                    \

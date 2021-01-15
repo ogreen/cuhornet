@@ -135,8 +135,9 @@ __global__ void forAllEdgesAdjUnionBalancedKernel(HornetDevice hornet, T* __rest
         int work_per_thread = total_work/threads_per_union;
         int remainder_work = total_work % threads_per_union;
         int diag_id, next_diag_id;
-        diag_id = thread_union_id*work_per_thread + std::min(thread_union_id, remainder_work);
-        next_diag_id = (thread_union_id+1)*work_per_thread + std::min(thread_union_id+1, remainder_work);
+        diag_id = thread_union_id*work_per_thread + xlib::min(thread_union_id, remainder_work);
+        next_diag_id = (thread_union_id+1)*work_per_thread + xlib::min(thread_union_id+1, remainder_work);
+
         vid_t low_ui, low_vi, high_vi, high_ui, ui_curr, vi_curr;
         if (diag_id > 0 && diag_id < total_work) {
             if (diag_id < u_len) {
@@ -237,8 +238,8 @@ __global__ void forAllEdgesAdjUnionImbalancedKernel(HornetDevice hornet, T* __re
         auto work_per_thread = u_len / threads_per_union;
         auto remainder_work = u_len % threads_per_union;
         // divide up work evenly among neighbors of u
-        ui_begin = thread_union_id*work_per_thread + std::min(thread_union_id, remainder_work);
-        ui_end = (thread_union_id+1)*work_per_thread + std::min(thread_union_id+1, remainder_work) - 1;
+        ui_begin = thread_union_id*work_per_thread + xlib::min(thread_union_id, remainder_work);
+        ui_end = (thread_union_id+1)*work_per_thread + xlib::min(thread_union_id+1, remainder_work) - 1;
         if (ui_end < u_len) {
             op(u_vtx, v_vtx, u_nodes+ui_begin, u_nodes+ui_end, v_nodes+vi_begin, v_nodes+vi_end, flag);
         }
@@ -341,8 +342,8 @@ namespace adj_unions {
             degree_t dst_len = dst.degree();
             degree_t u_len = (src_len <= dst_len) ? src_len : dst_len;
             degree_t v_len = (src_len <= dst_len) ? dst_len : src_len;
-            unsigned int log_u = std::min(32-__clz(u_len), 31);
-            unsigned int log_v = std::min(32-__clz(v_len), 31);
+            unsigned int log_u = xlib::min(32-__clz(u_len), 31);
+            unsigned int log_v = xlib::min(32-__clz(v_len), 31);
             int binary_work_est = u_len*log_v;
             int intersect_work_est = u_len + v_len + log_u;
             int METHOD = ((WORK_FACTOR*intersect_work_est >= binary_work_est)); 

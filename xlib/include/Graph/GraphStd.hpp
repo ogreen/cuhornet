@@ -50,7 +50,7 @@ template<typename, typename> class SCC;
 template<typename vid_t = int, typename eoff_t = int>
 class GraphStd : public GraphBase<vid_t, eoff_t> {
     using coo_t    = typename std::pair<vid_t, vid_t>;
-    using degree_t = int;
+    using degree_t = eoff_t;
     friend class BFS<vid_t, eoff_t>;
     friend class WCC<vid_t, eoff_t>;
     friend class SCC<vid_t, eoff_t>;
@@ -194,11 +194,11 @@ public:
 
     explicit GraphStd(const char* filename,
                       const ParsingProp& property
-                            = parsing_prop::PRINT_INFO) noexcept;
+                            = parsing_prop::NONE) noexcept;
 
     explicit GraphStd(StructureProp structure, const char* filename,
                       const ParsingProp& property
-                            = parsing_prop::PRINT_INFO) noexcept;
+                            = parsing_prop::NONE) noexcept;
 
     explicit GraphStd(const eoff_t* csr_offsets, vid_t nV,
                       const vid_t* csr_edges, eoff_t nE) noexcept;

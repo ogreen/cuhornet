@@ -114,7 +114,7 @@ void GraphStd<vid_t, eoff_t>::allocateAux(const GInfo& ginfo) noexcept {
     _nV = static_cast<vid_t>(ginfo.num_vertices);
     _nE = static_cast<eoff_t>(new_num_edges);
 
-    if (_prop.is_print()) {
+    if (0 && _prop.is_print()) {
         const char* const dir[] = { "Structure: Undirected   ",
                                     "Structure: Directed     " };
         const char* graph_dir = ginfo.direction == structure_prop::UNDIRECTED
@@ -182,7 +182,7 @@ void GraphStd<vid_t, eoff_t>::COOtoCSR() noexcept {
                 continue;
             _coo_edges[k++] = {dst, src};
         }
-        if (_prop.is_print() && _nE != k) {
+        if (0 && _prop.is_print() && _nE != k) {
             std::cout << "Double self-loops removed.  E: " << xlib::format(k)
                       << "\n";
         }
@@ -190,7 +190,7 @@ void GraphStd<vid_t, eoff_t>::COOtoCSR() noexcept {
     }
 
     if (_directed_to_undirected) {
-        if (_prop.is_print()) {
+        if (0 && _prop.is_print()) {
             if (_directed_to_undirected)
                 std::cout << "Directed to Undirected: ";
             std::cout << "Removing duplicated edges..." << std::flush;
@@ -198,15 +198,15 @@ void GraphStd<vid_t, eoff_t>::COOtoCSR() noexcept {
         std::sort(_coo_edges, _coo_edges + _nE);
         auto   last = std::unique(_coo_edges, _coo_edges + _nE);
         auto new_nE = std::distance(_coo_edges, last);
-        if (_prop.is_print() && new_nE != _nE) {
+        if (0&& _prop.is_print() && new_nE != _nE) {
             std::cout << "(" << xlib::format(_nE - new_nE) << " edges removed)"
                       << std::endl;
         }
         _nE = new_nE;
     }
     else if (_undirected_to_directed) {
-        std::cout << "Undirected to Directed: Removing random edges..."
-                  << std::endl;
+        // std::cout << "Undirected to Directed: Removing random edges..."
+        //           << std::endl;
         for (eoff_t i = 0, k = 0; i < _nE; i++) {
             if (_bitmask[i])
                 _coo_edges[k++] = _coo_edges[i];
@@ -230,7 +230,7 @@ void GraphStd<vid_t, eoff_t>::COOtoCSR() noexcept {
     }
 
     //--------------------------------------------------------------------------
-    if (_prop.is_print())
+    if (0 && _prop.is_print())
         std::cout << "COO to CSR...\t" << std::flush;
 
     if (_structure.is_directed() && _structure.is_reverse()) {
@@ -304,7 +304,7 @@ void GraphStd<vid_t, eoff_t>::COOtoCSR() noexcept {
     }
 
     if (_prop.is_sort() && (!_directed_to_undirected || _prop.is_randomize())) {
-        if (_prop.is_print())
+        if (0 && _prop.is_print())
             std::cout << "Sorting..." << std::endl;
         std::sort(_coo_edges, _coo_edges + _nE);
     }
@@ -355,8 +355,8 @@ void GraphStd<vid_t, eoff_t>::COOtoCSR() noexcept {
         delete[] _coo_edges;
         _coo_edges = nullptr;
     }
-    if (_prop.is_print())
-        std::cout << "Complete!\n" << std::endl;
+    // if (_prop.is_print())
+    //     std::cout << "Complete!\n" << std::endl;
 }
 
 template<typename vid_t, typename eoff_t>

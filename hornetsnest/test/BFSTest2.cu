@@ -45,7 +45,6 @@ int exec(int argc, char* argv[]) {
 
     std::cout << "My root is " << root << std::endl;
 
-
     cudaProfilerStart();
     for(int i=0; i<numberRoots; i++){
         bfs_top_down.reset();

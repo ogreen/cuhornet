@@ -85,7 +85,7 @@ public:
     void apply(HornetClass& hornet, const Operator& op) const noexcept;
 
 private:
-    static const unsigned BLOCK_SIZE = 128;
+    static const unsigned BLOCK_SIZE = 32;
 
     mutable xlib::CubExclusiveSum<int> prefixsum;
 

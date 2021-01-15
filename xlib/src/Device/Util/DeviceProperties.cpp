@@ -50,7 +50,7 @@ void DeviceProperty::_init() noexcept {
     SAFE_CALL( cudaGetDeviceCount(&_num_gpus) )
     for (int i = 0; i < _num_gpus; i++) {
         cudaDeviceProp devive_prop;
-        SAFE_CALL( cudaGetDeviceProperties(&devive_prop, i) )
+        cudaGetDeviceProperties(&devive_prop, i);
         _num_sm[i]        = devive_prop.multiProcessorCount;
         _smem_per_SM[i]   = devive_prop.sharedMemPerMultiprocessor;
         _rblock_per_SM[i] = (devive_prop.major >= 5) ? 32 : 16;

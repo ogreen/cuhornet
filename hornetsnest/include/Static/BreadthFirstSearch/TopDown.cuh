@@ -49,10 +49,18 @@ using dist_t = int;
 using HornetGraph = ::hornet::gpu::Hornet<vert_t>;
 using HornetInit  = ::hornet::HornetInit<vert_t>;
 
+<<<<<<< HEAD:hornetsnest/include/Static/BreadthFirstSearch/TopDown.cuh
 class BfsTopDown : public StaticAlgorithm<HornetGraph> {
 public:
     BfsTopDown(HornetGraph& hornet);
     ~BfsTopDown();
+=======
+/**
+ * @brief number of edges for a **BlockArray**
+ * @remark `EDGES_PER_BLOCKARRAY` must be a power of two
+ */
+const size_t EDGES_PER_BLOCKARRAY = 1 << 25;
+>>>>>>> Fixed the butterfly network to work with non powers of two.:hornet/include/Core/MemoryManager/MemoryManagerConf.hpp
 
     void reset()    override;
     void run()      override;
@@ -60,6 +68,8 @@ public:
     bool validate() override;
 
     void set_parameters(vert_t source);
+    dist_t getLevels(){return current_level;}
+
 private:
     TwoLevelQueue<vert_t> queue;
     load_balancing::BinarySearch   load_balancing;

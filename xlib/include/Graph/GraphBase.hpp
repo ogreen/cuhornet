@@ -139,7 +139,8 @@ public:
     virtual const std::string& name() const noexcept final;
 
     virtual void read(const char* filename,
-                      const ParsingProp& prop = parsing_prop::PRINT_INFO)
+                      const ParsingProp& prop = parsing_prop::PRINT_INFO,
+                      bool returnCOO=false)
                       final;   //NOLINT
 
     virtual void print()     const noexcept = 0;
