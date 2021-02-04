@@ -40,6 +40,7 @@ using vert_t = int;
 using HornetInit  = ::hornet::HornetInit<vert_t>;
 // using HornetGraph = ::hornet::gpu::Hornet<vert_t>;
 using HornetGraph = ::hornet::gpu::HornetStatic<vert_t>;
+using HornetGraphPtr = HornetGraph*;
 
 struct butterflyData {
     degree_t currLevel;
@@ -78,7 +79,7 @@ struct butterfly_communication{
 
 class butterfly : public StaticAlgorithm<HornetGraph> {
 public:
-    butterfly(HornetGraph& hornet,int fanout=1);
+    butterfly(HornetGraph& hornet,int numGPUs,int fanout=1);
     ~butterfly();
 
     void setInitValues(vert_t root_,vert_t lower_, vert_t upper_,int64_t gpu_id);
@@ -96,7 +97,7 @@ public:
     void oneIterationScan(degree_t level,bool lrb=false);
 
     void oneIterationComplete();
-    void communication(butterfly_communication* bfComm, int numGPUs,int iteration);
+    void communication(butterfly_communication* bfComm,int iteration);
 
     void reset()    override;
     void run()      override;
@@ -116,7 +117,35 @@ public:
     cudaEvent_t syncer;    
 
     unsigned char* cubBuffer;
+    int numGPUs;
+};
+
+using butterflyPtr = butterfly*;
+
+class multiButterfly {
+public:
+    multiButterfly(HornetGraphPtr* hornetArray,int numGPUs=1,int fanout=1);
+    ~multiButterfly();
+
+    void reset()    ;
+    void run()      ;
+
+
+    void setRootandQueue(vert_t root_);
+    void setVertexBoundries(vert_t* lower_, vert_t* upper_);
+
+
+private:
+    butterflyPtr* bfsArray;
+    butterfly_communication* bfComm;
+    int numGPUs;
+    int fanout;  
+
+public:
+    degree_t countTraversed;
+    int front;
 
 };
+
 
 } // hornetAlgs namespace

@@ -474,19 +474,29 @@ int main(int argc, char* argv[]) {
         }
         omp_set_num_threads(numGPUs);
 
+
         for(int f=0; f<2 ; f++){
             if(f==0 && onlyFanout4)
                 continue;
             fanout=fanoutArray[f];
 
-            using butterflyPtr = butterfly*;
-            butterflyPtr bfsArray[numGPUs];
-            #pragma omp parallel for schedule(static,1)
+            vert_t my_start_array[maxGPUs],my_end_array[maxGPUs];
             for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                cudaSetDevice(thread_id);
-
-                bfsArray[thread_id] = new butterfly(*hornetArray[thread_id],fanout);
+                my_start_array[thread_id]  = edgeSplits[thread_id];
+                my_end_array[thread_id]    = edgeSplits[thread_id+1];
             }
+
+            multiButterfly mBF(hornetArray,numGPUs,fanout);
+            mBF.setVertexBoundries(my_start_array,my_end_array);
+
+            // using butterflyPtr = butterfly*;
+            // butterflyPtr bfsArray[numGPUs];
+            // #pragma omp parallel for schedule(static,1)
+            // for(int thread_id=0; thread_id<numGPUs; thread_id++){
+            //     cudaSetDevice(thread_id);
+
+            //     bfsArray[thread_id] = new butterfly(*hornetArray[thread_id],fanout);
+            // }
             cudaSetDevice(0);
 
             for(int lrb=0; lrb<2; lrb++){
@@ -514,90 +524,99 @@ int main(int argc, char* argv[]) {
                             root=0;
                     }
 
+                    cudaSetDevice(0);
+
                     cudaEventRecord(start); 
                     cudaEventSynchronize(start); 
 
-                    #pragma omp parallel for schedule(static,1)
-                    for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                        cudaSetDevice(thread_id);
-                        int64_t my_start,my_end;
-                        my_start  = edgeSplits[thread_id];
-                        my_end  = edgeSplits[thread_id+1];
+                    mBF.reset();
+                    mBF.setRootandQueue(root);
+                    mBF.run();
+                    
+                    // cudaEventRecord(start); 
+                    // cudaEventSynchronize(start); 
 
-                        bfsArray[thread_id]->reset();    
-                        bfsArray[thread_id]->setInitValues(root, my_start, my_end,thread_id);
-                        bfsArray[thread_id]->queueRoot();
-                    }
-                    cudaSetDevice(0);
+                    // #pragma omp parallel for schedule(static,1)
+                    // for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //     cudaSetDevice(thread_id);
+                    //     int64_t my_start,my_end;
+                    //     my_start  = edgeSplits[thread_id];
+                    //     my_end  = edgeSplits[thread_id+1];
 
-                    int front = 1;
-                    degree_t countTraversed=1;
-                    while(true){
+                    //     bfsArray[thread_id]->reset();    
+                    //     bfsArray[thread_id]->setInitValues(root, my_start, my_end,thread_id);
+                    //     bfsArray[thread_id]->queueRoot();
+                    // }
+                    // cudaSetDevice(0);
 
-                        #pragma omp parallel for schedule(static,1)
-                        for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                            cudaSetDevice(thread_id);
+                    // int front = 1;
+                    // degree_t countTraversed=1;
+                    // while(true){
+
+                    //     #pragma omp parallel for schedule(static,1)
+                    //     for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //         cudaSetDevice(thread_id);
                         
-                            bfsArray[thread_id]->oneIterationScan(front,isLrb);
-                            bfComm[thread_id].queue_remote_ptr = bfsArray[thread_id]->remoteQueuePtr();
-                            bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
-                        }
-                        cudaSetDevice(0);
+                    //         bfsArray[thread_id]->oneIterationScan(front,isLrb);
+                    //         bfComm[thread_id].queue_remote_ptr = bfsArray[thread_id]->remoteQueuePtr();
+                    //         bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
+                    //     }
+                    //     cudaSetDevice(0);
 
-                        if(fanout==1){
-                            for (int l=0; l<logNumGPUs; l++){
-                                #pragma omp parallel for schedule(static,1)
-                                for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                                    cudaSetDevice(thread_id);
-                                    bfsArray[thread_id]->communication(bfComm,numGPUs,l);
-                                    bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
-                                }
-                            }
-                        }else if (fanout==4){
-                            #pragma omp parallel for schedule(static,1)
-                            for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                                cudaSetDevice(thread_id);
-                                bfsArray[thread_id]->communication(bfComm,numGPUs,0);
-                                bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
-                            }
+                    //     if(fanout==1){
+                    //         for (int l=0; l<logNumGPUs; l++){
+                    //             #pragma omp parallel for schedule(static,1)
+                    //             for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //                 cudaSetDevice(thread_id);
+                    //                 bfsArray[thread_id]->communication(bfComm,l);
+                    //                 bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
+                    //             }
+                    //         }
+                    //     }else if (fanout==4){
+                    //         #pragma omp parallel for schedule(static,1)
+                    //         for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //             cudaSetDevice(thread_id);
+                    //             bfsArray[thread_id]->communication(bfComm,0);
+                    //             bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
+                    //         }
 
-                            if(numGPUs>4){
-                                #pragma omp parallel for schedule(static,1)
-                                for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                                    cudaSetDevice(thread_id);
-                                    bfsArray[thread_id]->communication(bfComm,numGPUs,1);
-                                    bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
-                                }
-                            }
-                        }
-                        cudaSetDevice(0);
+                    //         if(numGPUs>4){
+                    //             #pragma omp parallel for schedule(static,1)
+                    //             for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //                 cudaSetDevice(thread_id);
+                    //                 bfsArray[thread_id]->communication(bfComm,1);
+                    //                 bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
+                    //             }
+                    //         }
+                    //     }
+                    //     cudaSetDevice(0);
 
-                        #pragma omp parallel for schedule(static,1)
-                        for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                            cudaSetDevice(thread_id);
-                            bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
-                            bfsArray[thread_id]->oneIterationComplete();
-                        }
-                        #pragma omp parallel for schedule(static,1)
-                        for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                            cudaSetDevice(thread_id);
-                            bfComm[thread_id].queue_local_length = bfsArray[thread_id]->localQueueSize();
-                        }
-                        cudaSetDevice(0);
+                    //     #pragma omp parallel for schedule(static,1)
+                    //     for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //         cudaSetDevice(thread_id);
+                    //         bfComm[thread_id].queue_remote_length = bfsArray[thread_id]->remoteQueueSize();
+                    //         bfsArray[thread_id]->oneIterationComplete();
+                    //     }
+                    //     #pragma omp parallel for schedule(static,1)
+                    //     for(int thread_id=0; thread_id<numGPUs; thread_id++){
+                    //         cudaSetDevice(thread_id);
+                    //         bfComm[thread_id].queue_local_length = bfsArray[thread_id]->localQueueSize();
+                    //     }
+                    //     cudaSetDevice(0);
 
-                        degree_t currFrontier=0;
-                        for(int64_t t=0; t<numGPUs; t++){
-                             currFrontier+=bfComm[t].queue_local_length;
-                             // countTraversed+=bfComm[t].queue_local_length;
-                        }
-                        countTraversed+=currFrontier;
+                    //     degree_t currFrontier=0;
+                    //     for(int64_t t=0; t<numGPUs; t++){
+                    //          currFrontier+=bfComm[t].queue_local_length;
+                    //          // countTraversed+=bfComm[t].queue_local_length;
+                    //     }
+                    //     countTraversed+=currFrontier;
 
-                        if(currFrontier==0){
-                            break;
-                        }
-                        front++;
-                    }
-                    cudaSetDevice(0);
+                    //     if(currFrontier==0){
+                    //         break;
+                    //     }
+                    //     front++;
+                    // }
+                    // cudaSetDevice(0);
 
 
                     cudaEventRecord(stop);
@@ -609,7 +628,9 @@ int main(int argc, char* argv[]) {
                     // std::cout << "Number of levels is : " << front << std::endl;
                     // std::cout << "The number of traversed vertices is : " << countTraversed << std::endl;
 
-                    totatLevels +=front;
+                    // totatLevels +=front;
+                    totatLevels += mBF.front;
+
                 }
 
                 std::sort(timePerRoot,timePerRoot+totalRoots);
@@ -629,11 +650,11 @@ int main(int argc, char* argv[]) {
 
             }
 
-            // #pragma omp parallel for schedule(static,1)
-            for(int thread_id=0; thread_id<numGPUs; thread_id++){
-                 cudaSetDevice(thread_id);
-                 delete bfsArray[thread_id];
-            }
+            // // #pragma omp parallel for schedule(static,1)
+            // for(int thread_id=0; thread_id<numGPUs; thread_id++){
+            //      cudaSetDevice(thread_id);
+            //      delete bfsArray[thread_id];
+            // }
 
         }
 
