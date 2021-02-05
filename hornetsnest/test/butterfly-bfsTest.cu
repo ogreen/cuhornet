@@ -91,15 +91,13 @@ int main(int argc, char* argv[]) {
     using namespace graph::parsing_prop;
     using namespace graph;
 
-    vert_t *h_cooSrc,*h_cooDst;
     int64_t nV,nE;
 
     int64_t numGPUs=4; int64_t logNumGPUs=2; int64_t fanout=1;
     int64_t minGPUs=1,maxGPUs=16;
-    // bool isLrb=false;
-    int isLrb=0,onlyLrb=0,onlyFanout4=0;
+    int onlyFanout4=0;
 
-    vert_t startRoot = 0;//(vert_t)graph.max_out_degree_id();
+    vert_t startRoot = 0;
     vert_t root = startRoot;
 
     if (argc>=3){
@@ -110,84 +108,21 @@ int main(int argc, char* argv[]) {
     }
 
     if (argc>=5){
-        onlyLrb = atoi(argv[4]);
-    }
-    if (argc>=6){
-        onlyFanout4 = atoi(argv[5]);
+        onlyFanout4 = atoi(argv[4]);
     }
 
     cudaSetDevice(0);
-    // if(0)
-    // {
-    //     ParsingProp pp(graph::detail::ParsingEnum::NONE);
-    //     // graph::GraphStd<int64_t, int64_t> graph(UNDIRECTED);
-    //     graph::GraphStd<int64_t, int64_t> graph(DIRECTED);
-    //     // graph::GraphStd<vert_t, eoff_t> graph(DIRECTED);
-    //     graph.read(argv[1],pp,true);
+  
+    ParsingProp pp(graph::detail::ParsingEnum::NONE);
+    graph::GraphStd<int64_t, int64_t> graph(UNDIRECTED);
+    graph.read(argv[1],pp,true);
 
-    //     auto cooGraph = graph.coo_ptr();
+    nV = graph.nV();
+    nE = graph.nE();
 
-    //     h_cooSrc = new vert_t[2*graph.nE()];
-    //     h_cooDst = new vert_t[2*graph.nE()];
-
-    //     #pragma omp parallel for 
-    //     for(int64_t i=0; i < graph.nE(); i++){
-    //         // if(i>(graph.nE()-50))
-    //         //     printf("%ld %ld\n",cooGraph[i].first,cooGraph[i].second);
-    //         h_cooSrc[i] = cooGraph[i].first;
-    //         h_cooDst[i] = cooGraph[i].second;
-    //         h_cooSrc[i+graph.nE()] = cooGraph[i].second;
-    //         h_cooDst[i+graph.nE()] = cooGraph[i].first;
-    //     }
-    //     nV = graph.nV();
-    //     nE = 2*graph.nE();
-
-    //     printf("Number of vertices is : %ld\n", nV);
-    //     printf("Number of edges is    : %ld\n", nE);
-
-
-    //     if(reOrgFlag){
-    //         printf("REORDERING!!\n");
-    //         for(int mul= 1; mul < 10; mul++)
-    //         {
-    //             int m = 1 << mul;
-    //             auto nVdivM = nV/m;
-    //             #pragma omp parallel for
-    //             for(int64_t i=0; i < nE; i++){
-    //                 if((h_cooSrc[i]%m)==0){
-    //                     if((h_cooSrc[i]+nVdivM)>=nV){
-    //                         h_cooSrc[i] = h_cooSrc[i]%nVdivM;
-    //                     }else{
-    //                         h_cooSrc[i]+=nVdivM;
-    //                     }
-    //                 }
-
-    //                 if((h_cooDst[i]%m)==0){
-    //                     if((h_cooDst[i]+nVdivM)>=nV){
-    //                         h_cooDst[i] = h_cooDst[i]%nVdivM;
-    //                     }else{
-    //                         h_cooDst[i]+=nVdivM;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-    // else{
-        ParsingProp pp(graph::detail::ParsingEnum::NONE);
-        graph::GraphStd<int64_t, int64_t> graph(UNDIRECTED);
-        graph.read(argv[1],pp,true);
-
-        nV = graph.nV();
-        nE = graph.nE();
-
-
-        h_cooDst=nullptr;
-        h_cooSrc=nullptr;
- 
-        // printf("Number of vertices is : %ld\n", nV);
-        // printf("Number of edges is    : %ld\n", nE);
-        // fflush(stdout);
+    // printf("Number of vertices is : %ld\n", nV);
+    // printf("Number of edges is    : %ld\n", nE);
+    // fflush(stdout);
 
     omp_set_num_threads(maxGPUs);
 
@@ -227,18 +162,15 @@ int main(int argc, char* argv[]) {
 
         omp_set_num_threads(numGPUs);
 
-
         using vertPtr = vert_t*;
 
         cudaSetDevice(0);
-
 
         using HornetGraphPtr = HornetGraph*;
 
         HornetGraphPtr hornetArray[numGPUs];
         vert_t maxArrayDegree[numGPUs];
         vert_t maxArrayId[numGPUs];
-
 
         #pragma omp parallel
         {      
@@ -275,7 +207,6 @@ int main(int argc, char* argv[]) {
             localOffset = (vert_t*)malloc(sizeof(vert_t)*(nV+1));
             edges       = (vert_t*)malloc(sizeof(vert_t)*(my_edges));
 
-
             int64_t i=0;
             for(int64_t u=my_start; u<my_end; u++){
                 int64_t d_size=graph.csr_out_offsets()[u+1]-graph.csr_out_offsets()[u];
@@ -283,7 +214,6 @@ int main(int argc, char* argv[]) {
                     edges[i++]=(vert_t) graph.csr_out_edges()[(graph.csr_out_offsets()[u]+d)];
                 } 
             }
-
             // printf("%ld %ld %ld %ld %ld %ld\n", thread_id,my_start,my_end, my_edges,graph.csr_out_offsets()[my_start],graph.csr_out_offsets()[my_end]);
             // fflush(stdout);
 
@@ -319,7 +249,6 @@ int main(int argc, char* argv[]) {
                 free(localOffset); 
             if(edges!=nullptr)
                 free(edges);
-
         }
 
         vert_t max_d    = maxArrayDegree[0];
@@ -331,7 +260,6 @@ int main(int argc, char* argv[]) {
             }
         }
         omp_set_num_threads(numGPUs);
-
 
         for(int f=0; f<2 ; f++){
             if(f==0 && onlyFanout4)
@@ -349,69 +277,58 @@ int main(int argc, char* argv[]) {
 
             cudaSetDevice(0);
 
-            for(int lrb=0; lrb<2; lrb++){
-                if(lrb==0 && onlyLrb)
-                    continue;
-                isLrb=lrb;
+            printf("%s,",argv[1]);
+            printf("%ld,%ld,",nV,nE);
+            printf("%ld,",numGPUs);
+            printf("%ld,",logNumGPUs);
+            printf("%ld,",fanout);
+            printf("%d,",max_id); // Starting root
 
-                printf("%s,",argv[1]);
-                printf("%ld,%ld,",nV,nE);
-                printf("%ld,",numGPUs);
-                printf("%ld,",logNumGPUs);
-                printf("%ld,",fanout);
-                printf("%d,",isLrb);
-                printf("%d,",max_id); // Starting root
-
-                double totalTime = 0;
-                int totatLevels = 0;
-                root=max_id;
-                int totalRoots = 100;
-                double timePerRoot[totalRoots];
-                for(int64_t i=0; i<totalRoots; i++){
-                    if(i>0){
-                        root++;
-                        if(root>nV)
-                            root=0;
-                    }
-
-                    cudaSetDevice(0);
-
-                    cudaEventRecord(start); 
-                    cudaEventSynchronize(start); 
-
-                    mBF.reset();
-                    mBF.setRootandQueue(root);
-                    mBF.run();
-
-                    cudaEventRecord(stop);
-                    cudaEventSynchronize(stop);
-                    float milliseconds = 0;
-                    cudaEventElapsedTime(&milliseconds, start, stop);  
-                    // printf("%f,", milliseconds/1000.0);
-                    timePerRoot[i] = milliseconds/1000.0;
-                    // std::cout << "Number of levels is : " << front << std::endl;
-                    // std::cout << "The number of traversed vertices is : " << countTraversed << std::endl;
-
-                    // totatLevels +=front;
-                    totatLevels += mBF.front;
-
+            double totalTime = 0;
+            int totatLevels = 0;
+            root=max_id;
+            int totalRoots = 100;
+            double timePerRoot[totalRoots];
+            for(int64_t i=0; i<totalRoots; i++){
+                if(i>0){
+                    root++;
+                    if(root>nV)
+                        root=0;
                 }
 
-                std::sort(timePerRoot,timePerRoot+totalRoots);
-                int filterRoots = totalRoots/2;
-                for(int root = 0; root < filterRoots; root++){
-                    totalTime += timePerRoot[filterRoots+totalRoots/4];
-                }
-                printf("%lf,", totalTime);
-                printf("%lf,", totalTime/(double)filterRoots);
-                printf("%d,",  filterRoots);
-                printf("%d,", totatLevels);
+                cudaSetDevice(0);
 
-                printf("\n");
+                cudaEventRecord(start); 
+                cudaEventSynchronize(start); 
 
+                mBF.reset();
+                mBF.setRootandQueue(root);
+                mBF.run();
+
+                cudaEventRecord(stop);
+                cudaEventSynchronize(stop);
+                float milliseconds = 0;
+                cudaEventElapsedTime(&milliseconds, start, stop);  
+                // printf("%f,", milliseconds/1000.0);
+                timePerRoot[i] = milliseconds/1000.0;
+                // std::cout << "Number of levels is : " << front << std::endl;
+                // std::cout << "The number of traversed vertices is : " << countTraversed << std::endl;
+                // totatLevels +=front;
+                totatLevels += mBF.front;
             }
-        }
 
+            std::sort(timePerRoot,timePerRoot+totalRoots);
+            int filterRoots = totalRoots/2;
+            for(int root = 0; root < filterRoots; root++){
+                totalTime += timePerRoot[filterRoots+totalRoots/4];
+            }
+            printf("%lf,", totalTime);
+            printf("%lf,", totalTime/(double)filterRoots);
+            printf("%d,",  filterRoots);
+            printf("%d,", totatLevels);
+            printf("\n");
+
+        }
 
         // #pragma omp parallel
         for(int i=0; i< numGPUs; i++) // very weird compiler error.
@@ -419,17 +336,10 @@ int main(int argc, char* argv[]) {
             // int64_t thread_id = omp_get_thread_num ();
             int64_t thread_id = i;
             cudaSetDevice(thread_id);
-
             delete hornetArray[thread_id];
         }
 
         cudaSetDevice(0);
-
-        // if(localOffset!=nullptr)
-            // delete[] localOffset; 
-        // if(edges!=nullptr)
-            // delete[] edges;
-        
     }
 
     cudaSetDevice(0);
@@ -451,17 +361,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if(h_cooSrc!=nullptr)
-        delete[] h_cooSrc;
-    if(h_cooDst!=nullptr)
-        delete[] h_cooDst;
-
-
-    // hornets_nest::gpu::finalizeRMMPoolAllocation(maxGPUs);
-
     return 0;
-
-
 }
 
 
