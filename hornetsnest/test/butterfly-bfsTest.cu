@@ -176,8 +176,6 @@ int main(int argc, char* argv[]) {
         {      
             int64_t thread_id = omp_get_thread_num ();
             cudaSetDevice(thread_id);
-            vert_t* localOffset=nullptr;
-            vert_t* edges=nullptr;
 
             int64_t upperNV = nV;
             if(upperNV%numGPUs){
@@ -196,9 +194,17 @@ int main(int argc, char* argv[]) {
 
             if(thread_id == 0 )
                 edgeSplits[0]=0;
-            #pragma omp barrier
+        }
+
+        #pragma omp parallel
+        {      
+            int64_t thread_id = omp_get_thread_num ();
+            cudaSetDevice(thread_id);
 
             int64_t my_start,my_end, my_edges;
+
+            vert_t* localOffset=nullptr;
+            vert_t* edges=nullptr;
 
             my_start = edgeSplits[thread_id];
             my_end  = edgeSplits[thread_id+1];
@@ -235,10 +241,6 @@ int main(int argc, char* argv[]) {
 
             hornetArray[thread_id] = new HornetGraph(hornet_init,hornet::DeviceType::DEVICE);
 
-            #pragma omp barrier
-            maxArrayDegree[thread_id]   = hornetArray[thread_id]->max_degree();
-            maxArrayId[thread_id]       = hornetArray[thread_id]->max_degree_id();
-
             cudaDeviceSynchronize();
             if(d_localOffset)
                 cudaFree(d_localOffset);
@@ -250,6 +252,15 @@ int main(int argc, char* argv[]) {
             if(edges!=nullptr)
                 free(edges);
         }
+
+        #pragma omp parallel
+        {   
+            int64_t thread_id = omp_get_thread_num ();
+            cudaSetDevice(thread_id);
+
+            maxArrayDegree[thread_id]   = hornetArray[thread_id]->max_degree();
+            maxArrayId[thread_id]       = hornetArray[thread_id]->max_degree_id();
+        }        
 
         vert_t max_d    = maxArrayDegree[0];
         vert_t max_id   = maxArrayId[0];
