@@ -190,8 +190,6 @@ int main(int argc, char* argv[]) {
         // fflush(stdout);
 
     omp_set_num_threads(maxGPUs);
-    // hornets_nest::gpu::initializeRMMPoolAllocation(0,maxGPUs);//update initPoolSize if you know your memory requirement and memory availability in your system, if initial pool size is set to 0 (default value), RMM currently assigns half the device memory.
-
 
     cudaSetDevice(0);
     
@@ -232,9 +230,6 @@ int main(int argc, char* argv[]) {
 
         using vertPtr = vert_t*;
 
-        vert_t* localOffset=nullptr;
-        vert_t* edges=nullptr;
-
         cudaSetDevice(0);
 
 
@@ -249,6 +244,8 @@ int main(int argc, char* argv[]) {
         {      
             int64_t thread_id = omp_get_thread_num ();
             cudaSetDevice(thread_id);
+            vert_t* localOffset=nullptr;
+            vert_t* edges=nullptr;
 
             int64_t upperNV = nV;
             if(upperNV%numGPUs){
@@ -278,12 +275,13 @@ int main(int argc, char* argv[]) {
             localOffset = (vert_t*)malloc(sizeof(vert_t)*(nV+1));
             edges       = (vert_t*)malloc(sizeof(vert_t)*(my_edges));
 
+
             int64_t i=0;
             for(int64_t u=my_start; u<my_end; u++){
                 int64_t d_size=graph.csr_out_offsets()[u+1]-graph.csr_out_offsets()[u];
                 for (int64_t d=0; d<d_size; d++){
                     edges[i++]=(vert_t) graph.csr_out_edges()[(graph.csr_out_offsets()[u]+d)];
-                }
+                } 
             }
 
             // printf("%ld %ld %ld %ld %ld %ld\n", thread_id,my_start,my_end, my_edges,graph.csr_out_offsets()[my_start],graph.csr_out_offsets()[my_end]);
@@ -292,17 +290,36 @@ int main(int argc, char* argv[]) {
             for(int64_t v=0; v<(nV+1); v++){
                 localOffset[v]=0;
             }
-            for(int64_t v=(my_start); v<nV; v++){
+            for(int64_t v=(my_start); v<(nV); v++){
                 localOffset[v+1] = localOffset[v] + (graph.csr_out_offsets()[v+1]-graph.csr_out_offsets()[v]);
             }
 
-            HornetInit hornet_init(nV,my_edges, localOffset,edges);
+            vert_t* d_localOffset=nullptr;
+            vert_t* d_edges=nullptr;
+            cudaMalloc(&d_localOffset,sizeof(vert_t)*(nV+1));
+            cudaMalloc(&d_edges,sizeof(vert_t)*(my_edges));
+            cudaMemcpy(d_localOffset,localOffset,sizeof(vert_t)*(nV+1),cudaMemcpyHostToDevice);
+            cudaMemcpy(d_edges,edges,sizeof(vert_t)*(my_edges),cudaMemcpyHostToDevice);
 
-            hornetArray[thread_id] = new HornetGraph(hornet_init);
+            HornetInit hornet_init(nV,my_edges, d_localOffset,d_edges);
+
+            hornetArray[thread_id] = new HornetGraph(hornet_init,hornet::DeviceType::DEVICE);
 
             #pragma omp barrier
             maxArrayDegree[thread_id]   = hornetArray[thread_id]->max_degree();
             maxArrayId[thread_id]       = hornetArray[thread_id]->max_degree_id();
+
+            cudaDeviceSynchronize();
+            if(d_localOffset)
+                cudaFree(d_localOffset);
+            if(d_edges)
+                cudaFree(d_edges);
+            
+            if(localOffset!=nullptr)
+                free(localOffset); 
+            if(edges!=nullptr)
+                free(edges);
+
         }
 
         vert_t max_d    = maxArrayDegree[0];
@@ -408,11 +425,11 @@ int main(int argc, char* argv[]) {
 
         cudaSetDevice(0);
 
-        if(localOffset!=nullptr)
-            delete[] localOffset; 
-        if(edges!=nullptr)
-            delete[] edges;
-
+        // if(localOffset!=nullptr)
+            // delete[] localOffset; 
+        // if(edges!=nullptr)
+            // delete[] edges;
+        
     }
 
     cudaSetDevice(0);
